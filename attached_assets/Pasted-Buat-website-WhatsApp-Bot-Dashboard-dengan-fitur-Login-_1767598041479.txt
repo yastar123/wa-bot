@@ -1,0 +1,172 @@
+Buat website WhatsApp Bot Dashboard dengan fitur:
+
+Login via scan QR / barcode
+
+Menampilkan dashboard web
+
+Tarik chat WhatsApp masuk
+
+Auto-reply
+
+Realtime chat UI seperti WhatsApp Web
+
+Simpan & tampilkan history chat + nomor
+
+Tanpa VPS, deployable ke Render / Railway / Vercel.
+
+🔁 ALUR SISTEM (WAJIB DIPAHAMI AI AGENT)
+User buka website
+   ↓
+Muncul QR Code WhatsApp
+   ↓
+User scan pakai aplikasi WhatsApp
+   ↓
+Session WhatsApp aktif
+   ↓
+Dashboard muncul
+   ↓
+Chat masuk ditarik realtime
+   ↓
+User bisa:
+   - lihat chat
+   - balas manual
+   - aktifkan auto reply
+   ↓
+History chat & nomor tersimpan
+
+📌 CATATAN TEKNIS PENTING (UNTUK AI AGENT)
+
+Gunakan WhatsApp Web JS / Baileys
+
+QR Code BUKAN WhatsApp Cloud API
+
+Backend wajib ada
+
+FE & BE satu project
+
+Fokus demo & MVP, bukan production scale
+
+🤖 PROMPT UTAMA UNTUK AI AGENT
+
+COPY PASTE PROMPT DI BAWAH INI
+
+🧩 PROMPT AI AGENT
+
+Kamu adalah fullstack engineer expert.
+
+Buatkan web application WhatsApp Bot Dashboard dengan ketentuan berikut:
+
+TEKNOLOGI
+
+Backend: Node.js + Express
+
+WhatsApp engine: Baileys (WhatsApp Web API)
+
+Frontend: React + TailwindCSS
+
+Realtime: Socket.io
+
+Database: SQLite (atau JSON jika perlu sederhana)
+
+Deploy target: Render (tanpa VPS)
+
+FITUR WAJIB
+
+QR Code Login
+
+Saat website dibuka, tampilkan QR Code WhatsApp
+
+QR berasal dari Baileys
+
+Setelah scan berhasil, simpan session
+
+Dashboard
+
+Status koneksi WhatsApp (connected / disconnected)
+
+Nomor WhatsApp aktif
+
+Tarik Chat Masuk
+
+Ambil pesan masuk realtime
+
+Simpan:
+
+nomor pengirim
+
+isi pesan
+
+timestamp
+
+Auto Reply
+
+Default auto-reply aktif
+
+Reply sederhana (hardcode / keyword based)
+
+Bisa dimatikan / dihidupkan
+
+Chat Realtime UI
+
+Tampilan mirip WhatsApp Web
+
+Sidebar list chat (nomor & last message)
+
+Area chat conversation
+
+Bisa kirim balasan manual
+
+History Chat
+
+Ambil history chat dari database
+
+Tampilkan per nomor
+
+STRUKTUR PROJECT
+
+Backend dan frontend dalam satu repository
+
+Sertakan:
+
+contoh .env
+
+script start
+
+instruksi deploy ke Render
+
+BATASAN
+
+Tidak perlu auth user
+
+Tidak perlu multi device
+
+Fokus MVP
+
+UI sederhana tapi rapi
+
+OUTPUT
+
+Kode lengkap siap jalan
+
+Penjelasan alur singkat
+
+Cara run lokal
+
+Cara deploy ke Render
+
+Pastikan QR code muncul pertama kali dan chat realtime bekerja.
+
+🗂 STRUKTUR FOLDER YANG DIHARAPKAN
+wa-dashboard/
+ ├─ server/
+ │   ├─ index.js
+ │   ├─ whatsapp.js
+ │   ├─ socket.js
+ │   └─ db.js
+ ├─ client/
+ │   ├─ src/
+ │   │   ├─ pages/
+ │   │   ├─ components/
+ │   │   └─ App.jsx
+ ├─ package.json
+ └─ README.md
