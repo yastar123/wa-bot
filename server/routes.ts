@@ -37,10 +37,9 @@ export async function registerRoutes(
 
   // API Routes
   app.get(api.status.get.path, (req, res) => {
-    const status = getStatus();
+    const statusObj = getStatus();
     const qr = getQr();
-    const user = getUser();
-    res.json({ status, user, qr });
+    res.json({ status: statusObj.status, user: statusObj.user, qr });
   });
 
   app.get(api.settings.get.path, async (req, res) => {
@@ -81,18 +80,6 @@ export async function registerRoutes(
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: "Failed to send message" });
-    }
-  });
-
-  // Status endpoint
-  app.get('/api/status', async (req, res) => {
-    try {
-      const { getStatus } = await import('./baileys');
-      const status = getStatus();
-      res.json(status);
-    } catch (err) {
-      console.error(err);
-      res.json({ status: "disconnected" });
     }
   });
 
