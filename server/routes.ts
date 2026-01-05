@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { Server as SocketIOServer } from "socket.io";
-import { initWhatsapp, getQr, getStatus, getUser, sendMessage } from "./baileys";
+import { initWhatsapp, getQr, getStatus, getUser, sendMessage, getSocket, disconnectSocket, forceClearState } from "./baileys";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -81,6 +81,61 @@ export async function registerRoutes(
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
+  // Status endpoint
+  app.get('/api/status', async (req, res) => {
+    try {
+      const { getStatus } = await import('./baileys');
+      const status = getStatus();
+      res.json(status);
+    } catch (err) {
+      console.error(err);
+      res.json({ status: "disconnected" });
+    }
+  });
+
+  // Disconnect endpoint
+  app.post('/api/disconnect', async (req, res) => {
+    try {
+      forceClearState();
+      res.json({ success: true });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Failed to disconnect" });
+    }
+  });
+
+  // Reconnect endpoint
+  app.post('/api/reconnect', async (req, res) => {
+    try {
+      console.log('Manual reconnect requested...');
+      
+      // Clear auth info to force QR generation
+      const fs = await import('fs/promises');
+      try {
+        await fs.rm('auth_info_baileys', { recursive: true, force: true });
+        console.log('Auth info cleared, forcing QR generation');
+      } catch (error) {
+        console.log('Auth info folder not found or already cleared');
+      }
+      
+      // Force clear all state
+      forceClearState();
+      
+      // Wait a bit then reconnect
+      setTimeout(() => {
+        if (io) {
+          console.log('Starting new WhatsApp initialization...');
+          initWhatsapp(io);
+        }
+      }, 3000);
+      
+      res.json({ success: true });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Failed to reconnect" });
     }
   });
 

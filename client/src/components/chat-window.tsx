@@ -165,6 +165,9 @@ function MessageBubble({ message, isPrevFromSame }: { message: Message, isPrevFr
           <span className="text-[10px] leading-none">
             {message.timestamp ? format(new Date(message.timestamp), 'HH:mm') : ''}
           </span>
+          {isMe && (
+            <span className="text-[10px] leading-none ml-1">✓✓</span>
+          )}
         </div>
       </div>
     </motion.div>

@@ -6,6 +6,8 @@ import { Loader2, Smartphone, ShieldCheck, Zap } from 'lucide-react';
 export default function Login() {
   const { status, qr } = useSocket();
 
+  console.log('Login component state:', { status, hasQR: !!qr, qrLength: qr?.length });
+
   return (
     <div className="min-h-screen w-full bg-[#111b21] flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background decoration */}
@@ -44,17 +46,40 @@ export default function Login() {
             <div className="absolute -inset-1 bg-gradient-to-r from-[#00a884] to-[#00a884]/50 rounded-lg blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200" />
             
             <div className="relative bg-white p-2 rounded-lg shadow-sm">
-              {status === 'connecting' && !qr ? (
-                <div className="w-64 h-64 flex flex-col items-center justify-center gap-4 bg-secondary/20 rounded-lg">
-                  <Loader2 className="w-12 h-12 text-[#00a884] animate-spin" />
-                  <p className="text-sm text-muted-foreground animate-pulse">Generating QR Code...</p>
-                </div>
-              ) : qr ? (
+              {qr ? (
                 <div className="relative">
                   <QRCodeSVG value={qr} size={256} level="L" includeMargin={true} />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-white/80 backdrop-blur-sm">
                     <p className="font-bold text-[#00a884]">Scan Me</p>
                   </div>
+                </div>
+              ) : status === 'connecting' ? (
+                <div className="w-64 h-64 flex flex-col items-center justify-center gap-4 bg-secondary/20 rounded-lg">
+                  <Loader2 className="w-12 h-12 text-[#00a884] animate-spin" />
+                  <p className="text-sm text-muted-foreground animate-pulse">Generating QR Code...</p>
+                </div>
+              ) : status === 'disconnected' ? (
+                <div className="w-64 h-64 flex flex-col items-center justify-center gap-4 bg-secondary/20 rounded-lg">
+                  <ShieldCheck className="w-16 h-16 text-[#00a884]" />
+                  <p className="font-semibold text-foreground">Click to Reconnect</p>
+                  <button 
+                    onClick={async () => {
+                      try {
+                        console.log('User clicked reconnect button');
+                        const response = await fetch('/api/reconnect', { method: 'POST' });
+                        if (response.ok) {
+                          console.log('Reconnect request successful');
+                        } else {
+                          console.error('Reconnect request failed');
+                        }
+                      } catch (error) {
+                        console.error('Error reconnecting:', error);
+                      }
+                    }}
+                    className="px-4 py-2 bg-[#00a884] text-white rounded-lg hover:bg-[#00a884]/90 transition-colors"
+                  >
+                    Reconnect WhatsApp
+                  </button>
                 </div>
               ) : (
                 <div className="w-64 h-64 flex flex-col items-center justify-center gap-4 bg-secondary/20 rounded-lg">
@@ -70,6 +95,9 @@ export default function Login() {
                <div className={`w-2 h-2 rounded-full ${status === 'connecting' ? 'bg-yellow-500 animate-pulse' : 'bg-red-500'}`} />
                <span className="capitalize">{status}</span>
              </div>
+             {qr && (
+               <span className="ml-4 text-xs text-green-600">QR Ready</span>
+             )}
           </div>
         </div>
       </motion.div>

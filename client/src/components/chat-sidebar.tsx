@@ -100,7 +100,10 @@ function ChatListItem({ chat, isSelected, onClick }: { chat: Chat, isSelected: b
         
         <div className="flex justify-between items-center">
           <p className="text-sm text-muted-foreground truncate w-full pr-2">
-            Click to view messages
+            {chat.lastMessageTimestamp ? 
+              `Last message: ${format(new Date(chat.lastMessageTimestamp), 'MMM dd, HH:mm')}` : 
+              'Click to view messages'
+            }
           </p>
           {(chat.unreadCount || 0) > 0 && (
             <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium">

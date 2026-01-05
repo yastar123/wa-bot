@@ -31,6 +31,18 @@ export default function Dashboard() {
 
   const selectedChat = chats?.find(c => c.jid === selectedJid) || null;
 
+  const handleDisconnect = async () => {
+    try {
+      // Call disconnect API
+      const response = await fetch('/api/disconnect', { method: 'POST' });
+      if (response.ok) {
+        setLocation('/login');
+      }
+    } catch (error) {
+      console.error('Error disconnecting:', error);
+    }
+  };
+
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden">
       {/* Navigation Rail (Desktop) */}
@@ -56,7 +68,12 @@ export default function Dashboard() {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  onClick={handleDisconnect}
+                >
                   <LogOut className="w-5 h-5" />
                 </Button>
               </TooltipTrigger>

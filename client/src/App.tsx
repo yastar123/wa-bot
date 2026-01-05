@@ -10,16 +10,9 @@ import { useStatus } from "@/hooks/use-wa";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 
-function ProtectedRoute({ component: Component, ...rest }: any) {
+function Router() {
   const { data: statusData, isLoading } = useStatus();
-  const [, setLocation] = useLocation();
-
-  useEffect(() => {
-    if (!isLoading && statusData?.status !== 'connected') {
-      setLocation('/login');
-    }
-  }, [isLoading, statusData, setLocation]);
-
+  
   if (isLoading) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-background">
@@ -30,16 +23,19 @@ function ProtectedRoute({ component: Component, ...rest }: any) {
       </div>
     );
   }
-
-  return <Component {...rest} />;
-}
-
-function Router() {
+  
   return (
     <Switch>
       <Route path="/login" component={Login} />
       <Route path="/">
-        {() => <ProtectedRoute component={Dashboard} />}
+        {() => {
+          // Jika connected, tampilkan dashboard
+          if (statusData?.status === 'connected') {
+            return <Dashboard />;
+          }
+          // Jika tidak connected, redirect ke login
+          return <Login />;
+        }}
       </Route>
       <Route component={NotFound} />
     </Switch>

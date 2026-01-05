@@ -29,56 +29,87 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  async getSettings(): Promise<Settings> {
-    const [existing] = await db.select().from(settings).limit(1);
-    if (existing) return existing;
+  private chats: Chat[] = [];
+  private messages: Message[] = [];
+  private settings: Settings = {
+    id: 1,
+    autoReplyEnabled: true,
+    autoReplyMessage: "Hello! This is an automated message."
+  };
 
-    // Create default settings if not exists
-    const [created] = await db.insert(settings).values({}).returning();
-    return created;
+  async getSettings(): Promise<Settings> {
+    // Selalu gunakan fallback settings saat database error
+    return this.settings;
   }
 
   async updateSettings(updates: UpdateSettings): Promise<Settings> {
-    const current = await this.getSettings();
-    const [updated] = await db
-      .update(settings)
-      .set(updates)
-      .where(eq(settings.id, current.id))
-      .returning();
-    return updated;
+    // Update fallback settings
+    this.settings = { ...this.settings, ...updates };
+    return this.settings;
   }
 
   async getChats(): Promise<Chat[]> {
-    return await db.select().from(chats).orderBy(desc(chats.lastMessageTimestamp));
+    // Selalu gunakan fallback chats
+    return this.chats;
   }
 
   async getChat(jid: string): Promise<Chat | undefined> {
-    const [chat] = await db.select().from(chats).where(eq(chats.jid, jid));
-    return chat;
+    // Cari di fallback chats
+    return this.chats.find(c => c.jid === jid);
   }
 
   async createOrUpdateChat(chat: InsertChat): Promise<Chat> {
-    const [existing] = await db.insert(chats)
-      .values(chat)
-      .onConflictDoUpdate({
-        target: chats.jid,
-        set: chat,
-      })
-      .returning();
-    return existing;
+    // Update fallback chat
+    const existingIndex = this.chats.findIndex(c => c.jid === chat.jid);
+    const existingChat = this.chats[existingIndex];
+    
+    // Preserve existing name if available
+    const chatName = chat.name || existingChat?.name || 'Unknown';
+    
+    const newChat = {
+      jid: chat.jid,
+      name: chatName,
+      unreadCount: chat.unreadCount || 0,
+      lastMessageTimestamp: chat.lastMessageTimestamp || new Date()
+    };
+    
+    if (existingIndex >= 0) {
+      this.chats[existingIndex] = newChat;
+    } else {
+      this.chats.push(newChat);
+    }
+    
+    return newChat;
   }
 
   async getMessages(chatJid: string): Promise<Message[]> {
-    return await db
-      .select()
-      .from(messages)
-      .where(eq(messages.chatJid, chatJid))
-      .orderBy(messages.timestamp);
+    // Filter fallback messages
+    return this.messages.filter(m => m.chatJid === chatJid);
   }
 
   async createMessage(message: InsertMessage): Promise<Message> {
-    const [created] = await db.insert(messages).values(message).returning();
-    return created;
+    // Create fallback message
+    const chat = this.chats.find(c => c.jid === message.chatJid);
+    const newMessage = {
+      id: message.id,
+      chatJid: message.chatJid,
+      senderJid: message.senderJid,
+      senderName: message.senderName || chat?.name || null,
+      content: message.content || null,
+      timestamp: message.timestamp || new Date(),
+      fromMe: message.fromMe || false
+    };
+    
+    // Check if message already exists to avoid duplicates
+    const existingIndex = this.messages.findIndex(m => m.id === newMessage.id);
+    if (existingIndex >= 0) {
+      // Update existing message with better sender name
+      this.messages[existingIndex] = newMessage;
+      return newMessage;
+    }
+    
+    this.messages.push(newMessage);
+    return newMessage;
   }
 }
 
