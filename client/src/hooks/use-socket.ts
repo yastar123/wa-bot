@@ -48,7 +48,7 @@ export function useSocket() {
       setState(prev => ({
         ...prev,
         status: data.status,
-        qr: data.qr || null, // Gunakan QR dari status update, atau null jika tidak ada
+        qr: data.qr || prev.qr, // Preserve existing QR if update doesn't provide one
       }));
       
       // Jika status connected, redirect ke dashboard (hanya jika di login page)

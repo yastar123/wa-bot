@@ -119,7 +119,7 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
         qr = qrCode;
         console.log('QR Code generated, emitting to clients...');
         io?.emit("qr", { qr });
-        io?.emit("status", { status: "connecting" });
+        io?.emit("status", { status: "connecting", qr });
       }
 
       if (connection === "close") {
