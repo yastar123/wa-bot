@@ -92,7 +92,17 @@ export function ChatWindow({ chat }: ChatWindowProps) {
           <div>
             <h2 className="font-semibold text-foreground">{chat.name || chat.jid}</h2>
             <p className="text-xs text-muted-foreground">
-               {chat.lastMessageTimestamp ? `Last active ${format(new Date(chat.lastMessageTimestamp), 'PP p')}` : 'Offline'}
+               {chat.isTyping ? (
+                 <span className="text-primary animate-pulse font-medium">typing...</span>
+               ) : chat.isOnline ? (
+                 <span className="text-primary font-medium">Online</span>
+               ) : chat.lastSeen ? (
+                 `Last seen ${format(new Date(chat.lastSeen), 'HH:mm')}`
+               ) : chat.lastMessageTimestamp ? (
+                 `Last active ${format(new Date(chat.lastMessageTimestamp), 'PP p')}`
+               ) : (
+                 'Offline'
+               )}
             </p>
           </div>
         </div>

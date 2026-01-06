@@ -71,7 +71,10 @@ export class DatabaseStorage implements IStorage {
       jid: chat.jid,
       name: chatName,
       unreadCount: chat.unreadCount || 0,
-      lastMessageTimestamp: chat.lastMessageTimestamp || new Date()
+      lastMessageTimestamp: chat.lastMessageTimestamp || new Date(),
+      isOnline: chat.isOnline || existingChat?.isOnline || false,
+      lastSeen: chat.lastSeen || existingChat?.lastSeen || null,
+      isTyping: chat.isTyping || existingChat?.isTyping || false,
     };
     
     if (existingIndex >= 0) {

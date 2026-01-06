@@ -334,6 +334,24 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
       }
     });
 
+    sock.ev.on("presence.update", async ({ id, presences }) => {
+      const jid = id;
+      const presence = Object.values(presences)[0];
+      const isOnline = presence.lastKnownPresence === "available";
+      const isTyping = presence.lastKnownPresence === "composing";
+      
+      const existingChat = await storage.getChat(jid);
+      if (existingChat) {
+        await storage.createOrUpdateChat({
+          ...existingChat,
+          isOnline,
+          isTyping,
+          lastSeen: isOnline ? new Date() : existingChat.lastSeen
+        });
+        io?.emit("chat_update");
+      }
+    });
+
     console.log('WhatsApp initialization complete');
     connectionState = 'connected';
   } catch (error) {

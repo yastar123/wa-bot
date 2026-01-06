@@ -16,6 +16,9 @@ export const chats = pgTable("chats", {
   name: text("name"),
   unreadCount: integer("unread_count").default(0),
   lastMessageTimestamp: timestamp("last_message_timestamp"),
+  isOnline: boolean("is_online").default(false),
+  lastSeen: timestamp("last_seen"),
+  isTyping: boolean("is_typing").default(false),
 });
 
 export const messages = pgTable("messages", {
