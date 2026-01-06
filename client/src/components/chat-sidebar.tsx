@@ -4,7 +4,7 @@ import { type Chat } from '@shared/schema';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
-import { Search, Loader2, MoreVertical, Circle, CheckCircle2, Users } from 'lucide-react';
+import { Search, Loader2, MoreVertical, Circle, CheckCircle2, Users, CheckCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -130,9 +130,10 @@ function ChatListItem({ chat, isSelected, onClick, onMarkUnread }: { chat: Chat,
         
         <div className="flex justify-between items-center">
           <p className={cn(
-            "text-sm truncate w-full pr-2",
+            "text-sm truncate w-full pr-2 flex items-center gap-1",
             (chat.unreadCount || 0) > 0 || chat.isMarkedUnread ? "text-foreground font-medium" : "text-muted-foreground"
           )}>
+            {chat.lastMessageFromMe && <CheckCheck className="w-3 h-3 inline" />}
             {chat.isTyping ? (
               <span className="text-primary animate-pulse">typing...</span>
             ) : chat.lastMessageTimestamp ? 

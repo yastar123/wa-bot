@@ -22,6 +22,7 @@ export const chats = pgTable("chats", {
   isMarkedUnread: boolean("is_marked_unread").default(false).notNull(),
   isGroup: boolean("is_group").default(false).notNull(),
   groupDescription: text("group_description"),
+  lastMessageFromMe: boolean("last_message_from_me").default(false),
 });
 
 export const messages = pgTable("messages", {

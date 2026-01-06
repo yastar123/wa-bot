@@ -275,6 +275,7 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
             lastMessageTimestamp: new Date((msg.messageTimestamp as number) * 1000),
             unreadCount: 0,
             isGroup: jid.endsWith('@g.us'),
+            lastMessageFromMe: msg.key.fromMe || false,
           });
 
           // Save message
@@ -495,6 +496,7 @@ export async function sendMessage(jid: string, content: string, options: { conte
         jid,
         name: chatName, // Preserve existing name
         lastMessageTimestamp: new Date(),
+        lastMessageFromMe: true,
       });
       
       io?.emit("message_upsert", message);
