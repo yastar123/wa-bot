@@ -116,13 +116,23 @@ export class DatabaseStorage implements IStorage {
     // Check if message already exists to avoid duplicates
     const existingIndex = this.messages.findIndex(m => m.id === newMessage.id);
     if (existingIndex >= 0) {
-      // Update existing message with better sender name
+      // Preserve star status if updating
+      newMessage.isStarred = message.isStarred ?? this.messages[existingIndex].isStarred;
       this.messages[existingIndex] = newMessage;
       return newMessage;
     }
     
     this.messages.push(newMessage);
     return newMessage;
+  }
+
+  async toggleStarMessage(messageId: string, star: boolean): Promise<boolean> {
+    const message = this.messages.find(m => m.id === messageId);
+    if (message) {
+      message.isStarred = star;
+      return true;
+    }
+    return false;
   }
 }
 

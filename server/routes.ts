@@ -113,13 +113,9 @@ export async function registerRoutes(
 
   app.post(api.messages.star.path, async (req, res) => {
     try {
-      const { jid, messageId, star } = api.messages.star.input.parse(req.body);
-      const messages = await storage.getMessages(jid);
-      const message = messages.find(m => m.id === messageId);
-      if (message) {
-        message.isStarred = star;
-      }
-      res.json({ success: true });
+      const { messageId, star } = api.messages.star.input.parse(req.body);
+      const success = await (storage as any).toggleStarMessage(messageId, star);
+      res.json({ success });
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: "Failed to star message" });
