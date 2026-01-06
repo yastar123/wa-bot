@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertSettingsSchema, chats, messages, settings } from './schema';
+import { insertSettingsSchema, chats, messages, settings, contacts } from './schema';
 
 export const errorSchemas = {
   validation: z.object({
@@ -71,6 +71,15 @@ export const api = {
       }),
       responses: {
         200: z.object({ success: z.boolean() }),
+      },
+    },
+  },
+  contacts: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/contacts',
+      responses: {
+        200: z.array(z.custom<typeof contacts.$inferSelect>()),
       },
     },
   },

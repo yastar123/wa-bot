@@ -3,6 +3,7 @@ import {
   settings,
   chats,
   messages,
+  contacts,
   type Settings,
   type InsertSettings,
   type UpdateSettings,
@@ -10,6 +11,8 @@ import {
   type InsertChat,
   type Message,
   type InsertMessage,
+  type Contact,
+  type InsertContact,
 } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 
@@ -26,11 +29,17 @@ export interface IStorage {
   // Messages
   getMessages(chatJid: string): Promise<Message[]>;
   createMessage(message: InsertMessage): Promise<Message>;
+
+  // Contacts
+  getContacts(): Promise<Contact[]>;
+  getContact(jid: string): Promise<Contact | undefined>;
+  createOrUpdateContact(contact: InsertContact): Promise<Contact>;
 }
 
 export class DatabaseStorage implements IStorage {
   private chats: Chat[] = [];
   private messages: Message[] = [];
+  private contacts: Contact[] = [];
   private settings: Settings = {
     id: 1,
     autoReplyEnabled: true,
@@ -39,32 +48,26 @@ export class DatabaseStorage implements IStorage {
   };
 
   async getSettings(): Promise<Settings> {
-    // Selalu gunakan fallback settings saat database error
     return this.settings;
   }
 
   async updateSettings(updates: UpdateSettings): Promise<Settings> {
-    // Update fallback settings
     this.settings = { ...this.settings, ...updates };
     return this.settings;
   }
 
   async getChats(): Promise<Chat[]> {
-    // Selalu gunakan fallback chats
     return this.chats;
   }
 
   async getChat(jid: string): Promise<Chat | undefined> {
-    // Cari di fallback chats
     return this.chats.find(c => c.jid === jid);
   }
 
   async createOrUpdateChat(chat: InsertChat): Promise<Chat> {
-    // Update fallback chat
     const existingIndex = this.chats.findIndex(c => c.jid === chat.jid);
     const existingChat = this.chats[existingIndex];
     
-    // Preserve existing name if available
     const chatName = chat.name || existingChat?.name || 'Unknown';
     
     const newChat = {
@@ -92,12 +95,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getMessages(chatJid: string): Promise<Message[]> {
-    // Filter fallback messages
     return this.messages.filter(m => m.chatJid === chatJid);
   }
 
   async createMessage(message: InsertMessage): Promise<Message> {
-    // Create fallback message
     const chat = this.chats.find(c => c.jid === message.chatJid);
     const newMessage = {
       id: message.id,
@@ -114,10 +115,8 @@ export class DatabaseStorage implements IStorage {
       isStarred: message.isStarred || false
     };
     
-    // Check if message already exists to avoid duplicates
     const existingIndex = this.messages.findIndex(m => m.id === newMessage.id);
     if (existingIndex >= 0) {
-      // Preserve star status if updating
       newMessage.isStarred = message.isStarred ?? this.messages[existingIndex].isStarred;
       this.messages[existingIndex] = newMessage;
       return newMessage;
@@ -134,6 +133,36 @@ export class DatabaseStorage implements IStorage {
       return true;
     }
     return false;
+  }
+
+  async getContacts(): Promise<Contact[]> {
+    return this.contacts;
+  }
+
+  async getContact(jid: string): Promise<Contact | undefined> {
+    return this.contacts.find(c => c.jid === jid);
+  }
+
+  async createOrUpdateContact(contact: InsertContact): Promise<Contact> {
+    const existingIndex = this.contacts.findIndex(c => c.jid === contact.jid);
+    const existingContact = this.contacts[existingIndex];
+
+    const newContact = {
+      jid: contact.jid,
+      name: contact.name || existingContact?.name || null,
+      pushName: contact.pushName || existingContact?.pushName || null,
+      verifiedName: contact.verifiedName || existingContact?.verifiedName || null,
+      profilePictureUrl: contact.profilePictureUrl || existingContact?.profilePictureUrl || null,
+      status: contact.status || existingContact?.status || null,
+    };
+
+    if (existingIndex >= 0) {
+      this.contacts[existingIndex] = newContact;
+    } else {
+      this.contacts.push(newContact);
+    }
+
+    return newContact;
   }
 }
 

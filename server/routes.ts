@@ -65,6 +65,11 @@ export async function registerRoutes(
     res.json(chats);
   });
 
+  app.get(api.contacts.list.path, async (req, res) => {
+    const contacts = await storage.getContacts();
+    res.json(contacts);
+  });
+
   app.get(api.chats.getMessages.path, async (req, res) => {
     const { jid } = req.params;
     const messages = await storage.getMessages(jid);
