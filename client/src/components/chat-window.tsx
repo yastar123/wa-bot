@@ -1,6 +1,6 @@
-import { Send, MoreVertical, Phone, Video, Loader2, Smile, Paperclip, Image as ImageIcon, FileText, Check, CheckCheck, Trash2, Star } from 'lucide-react';
+import { Send, MoreVertical, Phone, Video, Loader2, Smile, Paperclip, Image as ImageIcon, FileText, Check, CheckCheck, Trash2, Star, Search, X } from 'lucide-react';
 import { format } from 'date-fns';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useMessages, useSendMessage, useDeleteMessage, useStarMessage } from '@/hooks/use-wa';
@@ -16,16 +16,22 @@ export function ChatWindow({ chat }: ChatWindowProps) {
   const { mutate: deleteMessage } = useDeleteMessage();
   const { mutate: starMessage } = useStarMessage();
   const [input, setInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadType, setUploadType] = useState<"image" | "document" | null>(null);
 
   // Auto scroll to bottom
   useEffect(() => {
-    if (scrollRef.current) {
+    if (scrollRef.current && !isSearching) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, chat?.jid]);
+  }, [messages, chat?.jid, isSearching]);
+
+  const filteredMessages = messages?.filter(msg => 
+    !searchQuery || msg.content?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const handleSend = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -105,6 +111,17 @@ export function ChatWindow({ chat }: ChatWindowProps) {
           </div>
         </div>
         <div className="flex items-center gap-2 text-muted-foreground">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className={cn("hover:bg-secondary rounded-full", isSearching && "text-primary")}
+            onClick={() => {
+              setIsSearching(!isSearching);
+              if (isSearching) setSearchQuery('');
+            }}
+          >
+            <Search className="w-5 h-5" />
+          </Button>
           <Button variant="ghost" size="icon" className="hover:bg-secondary rounded-full">
             <Video className="w-5 h-5" />
           </Button>
@@ -118,6 +135,39 @@ export function ChatWindow({ chat }: ChatWindowProps) {
         </div>
       </header>
 
+      {/* Search Bar */}
+      <AnimatePresence>
+        {isSearching && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="bg-white/95 backdrop-blur-md border-b border-border/50 px-4 py-2 z-10"
+          >
+            <div className="relative max-w-2xl mx-auto">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input 
+                autoFocus
+                placeholder="Search messages..." 
+                className="pl-10 pr-10 rounded-full bg-secondary/30 border-none"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 hover:bg-transparent"
+                  onClick={() => setSearchQuery('')}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Messages */}
       <div 
         ref={scrollRef}
@@ -128,16 +178,22 @@ export function ChatWindow({ chat }: ChatWindowProps) {
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         ) : (
-          messages?.map((msg, idx) => (
+          filteredMessages?.map((msg, idx) => (
             <MessageBubble 
               key={msg.id || idx} 
               message={msg} 
-              isPrevFromSame={idx > 0 && messages[idx-1].fromMe === msg.fromMe}
+              isPrevFromSame={idx > 0 && filteredMessages[idx-1].fromMe === msg.fromMe}
               chatJid={chat.jid}
               onDelete={(id) => deleteMessage({ jid: chat.jid, messageId: id })}
               onStar={(id, star) => starMessage({ jid: chat.jid, messageId: id, star })}
             />
           ))
+        )}
+        {!isLoading && filteredMessages?.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+            <Search className="w-12 h-12 opacity-20 mb-4" />
+            <p>No messages found</p>
+          </div>
         )}
       </div>
 
