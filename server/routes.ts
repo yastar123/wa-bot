@@ -24,15 +24,14 @@ export async function registerRoutes(
     console.log("Client connected");
     
     // Send current status on connection
-    const status = getStatus();
+    const statusObj = getStatus();
     const qr = getQr();
-    const user = getUser();
     
-    if (status === "connecting" && qr) {
+    if (statusObj.status === "connecting" && qr) {
       socket.emit("qr", { qr });
     }
     
-    socket.emit("status", { status, user });
+    socket.emit("status", { status: statusObj.status, user: statusObj.user });
   });
 
   // API Routes
