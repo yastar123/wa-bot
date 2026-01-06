@@ -17,7 +17,7 @@ interface ChatWindowProps {
 
 export function ChatWindow({ chat }: ChatWindowProps) {
   const { data: messages, isLoading } = useMessages(chat?.jid || null);
-  const { mutate: sendMessage, isPending } = useSendMessage();
+  const { mutate: useSendMessageMutation, isPending } = useSendMessage();
   const { mutate: deleteMessage } = useDeleteMessage();
   const { mutate: starMessage } = useStarMessage();
   const [input, setInput] = useState('');
@@ -42,7 +42,7 @@ export function ChatWindow({ chat }: ChatWindowProps) {
     e?.preventDefault();
     if (!input.trim() || !chat) return;
 
-    sendMessage({ jid: chat.jid, content: input, contentType: "text" });
+    useSendMessageMutation({ jid: chat.jid, content: input, contentType: "text" });
     setInput('');
   };
 
@@ -55,7 +55,7 @@ export function ChatWindow({ chat }: ChatWindowProps) {
     const reader = new FileReader();
     reader.onload = async (event) => {
       const dataUrl = event.target?.result as string;
-      sendMessage({
+      useSendMessageMutation({
         jid: chat.jid,
         content: `Sent a ${uploadType}`,
         contentType: uploadType,
@@ -68,6 +68,20 @@ export function ChatWindow({ chat }: ChatWindowProps) {
     // Reset file input
     if (fileInputRef.current) fileInputRef.current.value = '';
     setUploadType(null);
+  };
+
+  const handleStar = (id: string, star: boolean) => {
+    if (!chat) return;
+    starMessage({ jid: chat.jid, messageId: id, star });
+  };
+
+  const handleForward = (jid: string, content: string) => {
+    if (!chat) return;
+    const targetJid = prompt("Enter Target WhatsApp ID (e.g. 628123456789@s.whatsapp.net):");
+    if (targetJid && targetJid.includes('@')) {
+      useSendMessageMutation({ jid: targetJid, content, contentType: "text" });
+      alert("Message forwarded!");
+    }
   };
 
   if (!chat) {
@@ -194,6 +208,7 @@ export function ChatWindow({ chat }: ChatWindowProps) {
               chatJid={chat.jid}
               onDelete={(id) => deleteMessage({ jid: chat.jid, messageId: id })}
               onStar={(id, star) => starMessage({ jid: chat.jid, messageId: id, star })}
+              useSendMessageMutation={useSendMessageMutation}
             />
           ))
         )}
@@ -258,7 +273,7 @@ export function ChatWindow({ chat }: ChatWindowProps) {
                       if (msg) {
                         // This is a simple implementation, ideally it should iterate through all chats
                         alert("Broadcast feature coming soon! Sending to current chat for now.");
-                        sendMessage({ jid: chat.jid, content: msg, contentType: "text" });
+                        useSendMessageMutation({ jid: chat.jid, content: msg, contentType: "text" });
                       }
                     }}
                   >
@@ -293,7 +308,21 @@ export function ChatWindow({ chat }: ChatWindowProps) {
   );
 }
 
-function MessageBubble({ message, isPrevFromSame, chatJid, onDelete, onStar }: { message: Message, isPrevFromSame: boolean, chatJid: string, onDelete: (id: string) => void, onStar: (id: string, star: boolean) => void }) {
+function MessageBubble({ 
+  message, 
+  isPrevFromSame, 
+  chatJid, 
+  onDelete, 
+  onStar,
+  useSendMessageMutation // Add this parameter
+}: { 
+  message: Message, 
+  isPrevFromSame: boolean, 
+  chatJid: string, 
+  onDelete: (id: string) => void, 
+  onStar: (id: string, star: boolean) => void,
+  useSendMessageMutation: any // Add type definition
+}) {
   const isMe = message.fromMe;
 
   return (
@@ -371,6 +400,19 @@ function MessageBubble({ message, isPrevFromSame, chatJid, onDelete, onStar }: {
           >
             <Star className={cn("w-4 h-4", message.isStarred && "fill-yellow-500 text-yellow-500")} />
             {message.isStarred ? "Unstar Message" : "Star Message"}
+          </DropdownMenuItem>
+          <DropdownMenuItem 
+            className="gap-2 cursor-pointer"
+            onClick={() => {
+              const targetJid = prompt("Forward to (JID):");
+              if (targetJid) {
+                // Simplified forwarding using sendMessage hook
+                useSendMessageMutation({ jid: targetJid, content: message.content || "", contentType: "text" });
+              }
+            }}
+          >
+            <Send className="w-4 h-4" />
+            Forward Message
           </DropdownMenuItem>
           <DropdownMenuItem 
             className="text-destructive focus:text-destructive gap-2 cursor-pointer"
