@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { useChats } from '@/hooks/use-wa';
+import { useChats, useMarkUnread } from '@/hooks/use-wa';
 import { type Chat } from '@shared/schema';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
-import { Search, Loader2 } from 'lucide-react';
+import { Search, Loader2, MoreVertical, Circle, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
 
 interface ChatSidebarProps {
   selectedJid: string | null;
@@ -15,6 +17,7 @@ interface ChatSidebarProps {
 
 export function ChatSidebar({ selectedJid, onSelectChat }: ChatSidebarProps) {
   const { data: chats, isLoading } = useChats();
+  const { mutate: markUnread } = useMarkUnread();
   const [search, setSearch] = useState('');
 
   const filteredChats = chats?.filter(chat => 
@@ -51,6 +54,7 @@ export function ChatSidebar({ selectedJid, onSelectChat }: ChatSidebarProps) {
                   chat={chat} 
                   isSelected={selectedJid === chat.jid}
                   onClick={() => onSelectChat(chat.jid)}
+                  onMarkUnread={(unread) => markUnread({ jid: chat.jid, unread })}
                 />
               ))}
             </AnimatePresence>
@@ -67,7 +71,7 @@ export function ChatSidebar({ selectedJid, onSelectChat }: ChatSidebarProps) {
   );
 }
 
-function ChatListItem({ chat, isSelected, onClick }: { chat: Chat, isSelected: boolean, onClick: () => void }) {
+function ChatListItem({ chat, isSelected, onClick, onMarkUnread }: { chat: Chat, isSelected: boolean, onClick: () => void, onMarkUnread: (unread: boolean) => void }) {
   const formatTime = (dateStr: string | Date | null) => {
     if (!dateStr) return '';
     return format(new Date(dateStr), 'HH:mm');
@@ -81,7 +85,7 @@ function ChatListItem({ chat, isSelected, onClick }: { chat: Chat, isSelected: b
       exit={{ opacity: 0, scale: 0.95 }}
       onClick={onClick}
       className={cn(
-        "flex items-center gap-4 p-4 cursor-pointer transition-colors duration-200 border-b border-border/20",
+        "flex items-center gap-4 p-4 cursor-pointer transition-colors duration-200 border-b border-border/20 group relative",
         isSelected ? "bg-secondary/80 border-l-4 border-l-primary" : "hover:bg-secondary/40 border-l-4 border-l-transparent"
       )}
     >
@@ -92,25 +96,67 @@ function ChatListItem({ chat, isSelected, onClick }: { chat: Chat, isSelected: b
       
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-baseline mb-1">
-          <h3 className="font-semibold text-foreground truncate">{chat.name || chat.jid}</h3>
-          <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
+          <h3 className={cn(
+            "font-semibold truncate",
+            (chat.unreadCount || 0) > 0 || chat.isMarkedUnread ? "text-primary" : "text-foreground"
+          )}>{chat.name || chat.jid}</h3>
+          <span className={cn(
+            "text-xs whitespace-nowrap ml-2",
+            (chat.unreadCount || 0) > 0 || chat.isMarkedUnread ? "text-primary font-bold" : "text-muted-foreground"
+          )}>
             {formatTime(chat.lastMessageTimestamp)}
           </span>
         </div>
         
         <div className="flex justify-between items-center">
-          <p className="text-sm text-muted-foreground truncate w-full pr-2">
-            {chat.lastMessageTimestamp ? 
-              `Last message: ${format(new Date(chat.lastMessageTimestamp), 'MMM dd, HH:mm')}` : 
+          <p className={cn(
+            "text-sm truncate w-full pr-2",
+            (chat.unreadCount || 0) > 0 || chat.isMarkedUnread ? "text-foreground font-medium" : "text-muted-foreground"
+          )}>
+            {chat.isTyping ? (
+              <span className="text-primary animate-pulse">typing...</span>
+            ) : chat.lastMessageTimestamp ? 
+              `Last activity: ${format(new Date(chat.lastMessageTimestamp), 'MMM dd, HH:mm')}` : 
               'Click to view messages'
             }
           </p>
-          {(chat.unreadCount || 0) > 0 && (
-            <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium">
-              {chat.unreadCount}
+          {((chat.unreadCount || 0) > 0 || chat.isMarkedUnread) && (
+            <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold shadow-sm">
+              {chat.unreadCount > 0 ? chat.unreadCount : ''}
             </span>
           )}
         </div>
+      </div>
+
+      <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-background shadow-sm border border-border/50">
+              <MoreVertical className="w-4 h-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem 
+              className="gap-2 cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                onMarkUnread(!chat.isMarkedUnread);
+              }}
+            >
+              {chat.isMarkedUnread ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 text-primary" />
+                  <span>Mark as read</span>
+                </>
+              ) : (
+                <>
+                  <Circle className="w-4 h-4" />
+                  <span>Mark as unread</span>
+                </>
+              )}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </motion.div>
   );

@@ -71,6 +71,24 @@ export async function registerRoutes(
     res.json(messages);
   });
 
+  app.post(api.chats.markUnread.path, async (req, res) => {
+    try {
+      const { jid } = req.params;
+      const { unread } = api.chats.markUnread.input.parse(req.body);
+      const chat = await storage.getChat(jid);
+      if (chat) {
+        await storage.createOrUpdateChat({
+          ...chat,
+          isMarkedUnread: unread
+        });
+      }
+      res.json({ success: true });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Failed to mark chat as unread" });
+    }
+  });
+
   app.post(api.messages.send.path, async (req, res) => {
     try {
       const { jid, content, contentType, fileUrl, fileName } = api.messages.send.input.parse(req.body);

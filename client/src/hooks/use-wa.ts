@@ -53,6 +53,25 @@ export function useUpdateSettings() {
 // ============================================
 // CHATS
 // ============================================
+export function useMarkUnread() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ jid, unread }: { jid: string; unread: boolean }) => {
+      const url = buildUrl(api.chats.markUnread.path, { jid });
+      const res = await fetch(url, {
+        method: api.chats.markUnread.method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ unread }),
+      });
+      if (!res.ok) throw new Error('Failed to mark unread');
+      return api.chats.markUnread.responses[200].parse(await res.json());
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.chats.list.path] });
+    },
+  });
+}
+
 export function useChats() {
   return useQuery({
     queryKey: [api.chats.list.path],

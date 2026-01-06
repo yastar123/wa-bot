@@ -63,6 +63,16 @@ export const api = {
         200: z.array(z.custom<typeof messages.$inferSelect>()),
       },
     },
+    markUnread: {
+      method: 'POST' as const,
+      path: '/api/chats/:jid/unread',
+      input: z.object({
+        unread: z.boolean(),
+      }),
+      responses: {
+        200: z.object({ success: z.boolean() }),
+      },
+    },
   },
   messages: {
     send: {
