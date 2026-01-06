@@ -169,6 +169,7 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
           name: contact.name || contact.notify || contact.verifiedName || contact.id || "Unknown Contact",
           unreadCount: 0,
           lastMessageTimestamp: new Date(),
+          isGroup: contact.id?.endsWith('@g.us') || false,
         });
       }
 
@@ -178,6 +179,7 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
           name: chat.name || chat.id,
           unreadCount: chat.unreadCount || 0,
           lastMessageTimestamp: new Date(chat.conversationTimestamp ? (Number(chat.conversationTimestamp) * 1000) : Date.now()),
+          isGroup: chat.id?.endsWith('@g.us') || false,
         });
       }
 
@@ -227,6 +229,7 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
           name: contact.name || contact.notify || contact.verifiedName || contact.id || "Unknown Contact",
           unreadCount: 0,
           lastMessageTimestamp: new Date(),
+          isGroup: (contact.id || "").endsWith('@g.us'),
         });
       }
       io?.emit("chat_update");
@@ -270,6 +273,7 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
             name: chatName,
             lastMessageTimestamp: new Date((msg.messageTimestamp as number) * 1000),
             unreadCount: 0,
+            isGroup: jid.endsWith('@g.us'),
           });
 
           // Save message

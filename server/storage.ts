@@ -76,6 +76,8 @@ export class DatabaseStorage implements IStorage {
       lastSeen: chat.lastSeen || existingChat?.lastSeen || null,
       isTyping: chat.isTyping || existingChat?.isTyping || false,
       isMarkedUnread: chat.isMarkedUnread || existingChat?.isMarkedUnread || false,
+      isGroup: chat.isGroup || existingChat?.isGroup || false,
+      groupDescription: chat.groupDescription || existingChat?.groupDescription || null,
     };
     
     if (existingIndex >= 0) {

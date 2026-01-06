@@ -20,6 +20,8 @@ export const chats = pgTable("chats", {
   lastSeen: timestamp("last_seen"),
   isTyping: boolean("is_typing").default(false),
   isMarkedUnread: boolean("is_marked_unread").default(false).notNull(),
+  isGroup: boolean("is_group").default(false).notNull(),
+  groupDescription: text("group_description"),
 });
 
 export const messages = pgTable("messages", {

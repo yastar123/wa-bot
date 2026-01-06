@@ -4,7 +4,7 @@ import { type Chat } from '@shared/schema';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
-import { Search, Loader2, MoreVertical, Circle, CheckCircle2 } from 'lucide-react';
+import { Search, Loader2, MoreVertical, Circle, CheckCircle2, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -90,8 +90,8 @@ function ChatListItem({ chat, isSelected, onClick, onMarkUnread }: { chat: Chat,
       )}
     >
       <Avatar className="h-12 w-12 border border-border/50 shadow-sm">
-        <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${chat.name || chat.jid}`} />
-        <AvatarFallback>{chat.name?.substring(0, 2).toUpperCase()}</AvatarFallback>
+        <AvatarImage src={`https://api.dicebear.com/7.x/${chat.isGroup ? 'identicon' : 'initials'}/svg?seed=${chat.name || chat.jid}`} />
+        <AvatarFallback>{chat.isGroup ? <Users className="w-6 h-6" /> : chat.name?.substring(0, 2).toUpperCase()}</AvatarFallback>
       </Avatar>
       
       <div className="flex-1 min-w-0">
