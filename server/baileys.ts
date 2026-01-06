@@ -174,6 +174,7 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
       }
 
       for (const chat of initialChats) {
+        if (!chat.id) continue;
         await storage.createOrUpdateChat({
           jid: chat.id,
           name: chat.name || chat.id,
@@ -460,7 +461,12 @@ export async function sendMessage(jid: string, content: string, options: { conte
     if (options.contentType === 'image' && options.fileUrl) {
        sent = await sock.sendMessage(jid, { image: { url: options.fileUrl }, caption: content });
     } else if (options.contentType === 'document' && options.fileUrl) {
-       sent = await sock.sendMessage(jid, { document: { url: options.fileUrl }, fileName: options.fileName || 'file', caption: content });
+       sent = await sock.sendMessage(jid, { 
+         document: { url: options.fileUrl }, 
+         mimetype: 'application/octet-stream',
+         fileName: options.fileName || 'file', 
+         caption: content 
+       });
     } else {
        sent = await sock.sendMessage(jid, { text: content });
     }

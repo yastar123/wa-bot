@@ -135,9 +135,9 @@ function ChatListItem({ chat, isSelected, onClick, onMarkUnread }: { chat: Chat,
               'Click to view messages'
             }
           </p>
-          {((chat.unreadCount || 0) > 0 || chat.isMarkedUnread) && (
+          {((chat.unreadCount ?? 0) > 0 || chat.isMarkedUnread) && (
             <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold shadow-sm">
-              {chat.unreadCount > 0 ? chat.unreadCount : ''}
+              {chat.unreadCount && chat.unreadCount > 0 ? chat.unreadCount : ''}
             </span>
           )}
         </div>

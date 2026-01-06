@@ -1,10 +1,15 @@
-import { Send, MoreVertical, Phone, Video, Loader2, Smile, Paperclip, Image as ImageIcon, FileText, Check, CheckCheck, Trash2, Star, Search, X } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Send, MoreVertical, Phone, Video, Loader2, Smile, Paperclip, Image as ImageIcon, FileText, Check, CheckCheck, Trash2, Star, Search, X, Users } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useMessages, useSendMessage, useDeleteMessage, useStarMessage } from '@/hooks/use-wa';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { type Chat, type Message } from '@shared/schema';
 
 interface ChatWindowProps {
   chat: Chat | null;
