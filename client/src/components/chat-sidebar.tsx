@@ -4,11 +4,12 @@ import { type Chat } from '@shared/schema';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
-import { Search, Loader2, MoreVertical, Circle, CheckCircle2, Users, CheckCheck } from 'lucide-react';
+import { Search, Loader2, MoreVertical, Circle, CheckCircle2, Users, CheckCheck, Pin, PinOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface ChatSidebarProps {
   selectedJid: string | null;
@@ -18,12 +19,30 @@ interface ChatSidebarProps {
 export function ChatSidebar({ selectedJid, onSelectChat }: ChatSidebarProps) {
   const { data: chats, isLoading } = useChats();
   const { mutate: markUnread } = useMarkUnread();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
+
+  const togglePin = async (jid: string, pin: boolean) => {
+    try {
+      await fetch(`/api/chats/${jid}/pin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin })
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/chats'] });
+    } catch (error) {
+      console.error('Error pinning chat:', error);
+    }
+  };
 
   const filteredChats = chats?.filter(chat => 
     chat.name?.toLowerCase().includes(search.toLowerCase()) || 
     chat.jid.includes(search)
   ).sort((a, b) => {
+    // Pin status takes priority
+    if (a.isPinned && !b.isPinned) return -1;
+    if (!a.isPinned && b.isPinned) return 1;
+    
     // Sort by last activity
     const timeA = a.lastMessageTimestamp ? new Date(a.lastMessageTimestamp).getTime() : 0;
     const timeB = b.lastMessageTimestamp ? new Date(b.lastMessageTimestamp).getTime() : 0;
@@ -75,6 +94,7 @@ export function ChatSidebar({ selectedJid, onSelectChat }: ChatSidebarProps) {
                   isSelected={selectedJid === chat.jid}
                   onClick={() => onSelectChat(chat.jid)}
                   onMarkUnread={(unread) => markUnread({ jid: chat.jid, unread })}
+                  onTogglePin={(pin) => togglePin(chat.jid, pin)}
                 />
               ))}
             </AnimatePresence>
@@ -91,7 +111,13 @@ export function ChatSidebar({ selectedJid, onSelectChat }: ChatSidebarProps) {
   );
 }
 
-function ChatListItem({ chat, isSelected, onClick, onMarkUnread }: { chat: Chat, isSelected: boolean, onClick: () => void, onMarkUnread: (unread: boolean) => void }) {
+function ChatListItem({ chat, isSelected, onClick, onMarkUnread, onTogglePin }: { 
+  chat: Chat, 
+  isSelected: boolean, 
+  onClick: () => void, 
+  onMarkUnread: (unread: boolean) => void,
+  onTogglePin: (pin: boolean) => void 
+}) {
   const formatTime = (dateStr: string | Date | null) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
@@ -120,11 +146,14 @@ function ChatListItem({ chat, isSelected, onClick, onMarkUnread }: { chat: Chat,
       </Avatar>
       
       <div className="flex-1 min-w-0">
-        <div className="flex justify-between items-baseline mb-1">
-          <h3 className={cn(
-            "font-semibold truncate",
-            (chat.unreadCount || 0) > 0 || chat.isMarkedUnread ? "text-primary" : "text-foreground"
-          )}>{chat.name || chat.jid}</h3>
+          <div className="flex justify-between items-baseline mb-1">
+          <div className="flex items-center gap-1.5 min-w-0">
+            {chat.isPinned && <Pin className="w-3 h-3 text-primary shrink-0" />}
+            <h3 className={cn(
+              "font-semibold truncate",
+              (chat.unreadCount || 0) > 0 || chat.isMarkedUnread ? "text-primary" : "text-foreground"
+            )}>{chat.name || chat.jid}</h3>
+          </div>
           <span className={cn(
             "text-xs whitespace-nowrap ml-2",
             (chat.unreadCount || 0) > 0 || chat.isMarkedUnread ? "text-primary font-bold" : "text-muted-foreground"
@@ -162,6 +191,25 @@ function ChatListItem({ chat, isSelected, onClick, onMarkUnread }: { chat: Chat,
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem 
+              className="gap-2 cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                onTogglePin(!chat.isPinned);
+              }}
+            >
+              {chat.isPinned ? (
+                <>
+                  <PinOff className="w-4 h-4" />
+                  <span>Unpin chat</span>
+                </>
+              ) : (
+                <>
+                  <Pin className="w-4 h-4" />
+                  <span>Pin chat</span>
+                </>
+              )}
+            </DropdownMenuItem>
             <DropdownMenuItem 
               className="gap-2 cursor-pointer"
               onClick={(e) => {

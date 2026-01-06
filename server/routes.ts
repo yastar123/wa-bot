@@ -89,6 +89,24 @@ export async function registerRoutes(
     }
   });
 
+  app.post('/api/chats/:jid/pin', async (req, res) => {
+    try {
+      const { jid } = req.params;
+      const { pin } = z.object({ pin: z.boolean() }).parse(req.body);
+      const chat = await storage.getChat(jid);
+      if (chat) {
+        await storage.createOrUpdateChat({
+          ...chat,
+          isPinned: pin
+        });
+      }
+      res.json({ success: true });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Failed to pin chat" });
+    }
+  });
+
   app.post(api.messages.send.path, async (req, res) => {
     try {
       const { jid, content, contentType, fileUrl, fileName } = api.messages.send.input.parse(req.body);

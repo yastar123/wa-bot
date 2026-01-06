@@ -23,6 +23,7 @@ export const chats = pgTable("chats", {
   isGroup: boolean("is_group").default(false).notNull(),
   groupDescription: text("group_description"),
   lastMessageFromMe: boolean("last_message_from_me").default(false),
+  isPinned: boolean("is_pinned").default(false).notNull(),
 });
 
 export const messages = pgTable("messages", {
