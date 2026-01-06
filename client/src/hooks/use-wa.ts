@@ -85,11 +85,17 @@ export function useMessages(jid: string | null) {
 export function useSendMessage() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ jid, content }: { jid: string; content: string }) => {
+    mutationFn: async ({ jid, content, contentType, fileUrl, fileName }: { 
+      jid: string; 
+      content: string; 
+      contentType?: "text" | "image" | "document";
+      fileUrl?: string;
+      fileName?: string;
+    }) => {
       const res = await fetch(api.messages.send.path, {
         method: api.messages.send.method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jid, content }),
+        body: JSON.stringify({ jid, content, contentType, fileUrl, fileName }),
       });
       if (!res.ok) throw new Error('Failed to send message');
       return api.messages.send.responses[200].parse(await res.json());

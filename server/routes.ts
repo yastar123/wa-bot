@@ -73,8 +73,8 @@ export async function registerRoutes(
 
   app.post(api.messages.send.path, async (req, res) => {
     try {
-      const { jid, content } = api.messages.send.input.parse(req.body);
-      await sendMessage(jid, content);
+      const { jid, content, contentType, fileUrl, fileName } = api.messages.send.input.parse(req.body);
+      await sendMessage(jid, content, { contentType, fileUrl, fileName });
       res.json({ success: true });
     } catch (err) {
       console.error(err);

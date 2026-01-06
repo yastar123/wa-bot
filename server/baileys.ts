@@ -189,6 +189,18 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
         const content = msg.message.conversation || 
                         msg.message.extendedTextMessage?.text || 
                         msg.message.imageMessage?.caption || "";
+        
+        let contentType = "text";
+        let fileUrl = null;
+        let fileName = null;
+
+        if (msg.message.imageMessage) {
+          contentType = "image";
+          fileName = "image.jpg";
+        } else if (msg.message.documentMessage) {
+          contentType = "document";
+          fileName = msg.message.documentMessage.fileName || "document";
+        }
 
         await storage.createMessage({
           id: msg.key.id!,
@@ -196,6 +208,9 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
           senderJid: msg.key.participant || msg.key.remoteJid!,
           senderName: msg.pushName || null,
           content,
+          contentType,
+          fileUrl,
+          fileName,
           timestamp: new Date((msg.messageTimestamp as number) * 1000),
           fromMe: msg.key.fromMe || false,
         });
@@ -230,7 +245,19 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
             msg.message.imageMessage?.caption ||
             "";
 
-          if (!content) continue;
+          let contentType = "text";
+          let fileUrl = null;
+          let fileName = null;
+
+          if (msg.message.imageMessage) {
+            contentType = "image";
+            fileName = "image.jpg";
+          } else if (msg.message.documentMessage) {
+            contentType = "document";
+            fileName = msg.message.documentMessage.fileName || "document";
+          }
+
+          if (!content && contentType === "text") continue;
 
           // Get existing chat to preserve name
           const existingChat = await storage.getChat(jid);
@@ -251,6 +278,9 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
             senderJid: msg.key.participant || msg.key.remoteJid!,
             senderName: msg.pushName || existingChat?.name || jid,
             content,
+            contentType,
+            fileUrl,
+            fileName,
             timestamp: new Date((msg.messageTimestamp as number) * 1000),
             fromMe: msg.key.fromMe || false,
           });
@@ -368,9 +398,16 @@ export function forceClearState() {
   console.log('All WhatsApp state cleared');
 }
 
-export async function sendMessage(jid: string, content: string) {
+export async function sendMessage(jid: string, content: string, options: { contentType?: string, fileUrl?: string, fileName?: string } = {}) {
   if (sock) {
-    const sent = await sock.sendMessage(jid, { text: content });
+    let sent;
+    if (options.contentType === 'image' && options.fileUrl) {
+       sent = await sock.sendMessage(jid, { image: { url: options.fileUrl }, caption: content });
+    } else if (options.contentType === 'document' && options.fileUrl) {
+       sent = await sock.sendMessage(jid, { document: { url: options.fileUrl }, fileName: options.fileName || 'file', caption: content });
+    } else {
+       sent = await sock.sendMessage(jid, { text: content });
+    }
     
     // Manually save sent message to ensure it appears in UI immediately
     if (sent) {
@@ -384,6 +421,9 @@ export async function sendMessage(jid: string, content: string) {
         senderJid: sock.user?.id || "me",
         senderName: chatName, // Use chat name instead of "Me"
         content,
+        contentType: options.contentType || "text",
+        fileUrl: options.fileUrl || null,
+        fileName: options.fileName || null,
         timestamp: new Date(),
         fromMe: true,
       });

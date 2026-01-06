@@ -97,6 +97,9 @@ export class DatabaseStorage implements IStorage {
       senderJid: message.senderJid,
       senderName: message.senderName || chat?.name || null,
       content: message.content || null,
+      contentType: message.contentType || "text",
+      fileUrl: message.fileUrl || null,
+      fileName: message.fileName || null,
       timestamp: message.timestamp || new Date(),
       fromMe: message.fromMe || false
     };

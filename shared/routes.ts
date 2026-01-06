@@ -71,6 +71,9 @@ export const api = {
       input: z.object({
         jid: z.string(),
         content: z.string(),
+        contentType: z.enum(['text', 'image', 'document']).optional(),
+        fileUrl: z.string().optional(),
+        fileName: z.string().optional(),
       }),
       responses: {
         200: z.object({ success: z.boolean() }),

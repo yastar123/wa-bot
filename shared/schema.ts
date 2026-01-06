@@ -24,6 +24,9 @@ export const messages = pgTable("messages", {
   senderJid: text("sender_jid").notNull(),
   senderName: text("sender_name"),
   content: text("content"),
+  contentType: text("content_type").default("text").notNull(), // text, image, document
+  fileUrl: text("file_url"),
+  fileName: text("file_name"),
   timestamp: timestamp("timestamp").defaultNow(),
   fromMe: boolean("from_me").default(false),
 });
@@ -49,4 +52,7 @@ export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type SendMessageRequest = {
   jid: string;
   content: string;
+  contentType?: "text" | "image" | "document";
+  fileUrl?: string;
+  fileName?: string;
 };
