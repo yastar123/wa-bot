@@ -99,7 +99,10 @@ export function ChatWindow({ chat }: ChatWindowProps) {
                {chat.isTyping ? (
                  <span className="text-primary animate-pulse font-medium">typing...</span>
                ) : chat.isOnline ? (
-                 <span className="text-primary font-medium">Online</span>
+                 <span className="text-primary font-medium flex items-center gap-1">
+                   <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                   Online
+                 </span>
                ) : chat.lastSeen ? (
                  `Last seen ${format(new Date(chat.lastSeen), 'HH:mm')}`
                ) : chat.lastMessageTimestamp ? (
@@ -241,6 +244,21 @@ export function ChatWindow({ chat }: ChatWindowProps) {
                   >
                     <FileText className="w-4 h-4 text-blue-500" />
                     <span>Document</span>
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    className="justify-start gap-2"
+                    onClick={() => {
+                      const msg = prompt("Enter broadcast message:");
+                      if (msg) {
+                        // This is a simple implementation, ideally it should iterate through all chats
+                        alert("Broadcast feature coming soon! Sending to current chat for now.");
+                        sendMessage({ jid: chat.jid, content: msg, contentType: "text" });
+                      }
+                    }}
+                  >
+                    <Users className="w-4 h-4 text-green-500" />
+                    <span>Broadcast</span>
                   </Button>
                 </div>
               </PopoverContent>

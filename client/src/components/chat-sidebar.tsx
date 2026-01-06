@@ -38,6 +38,21 @@ export function ChatSidebar({ selectedJid, onSelectChat }: ChatSidebarProps) {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
+        <Button 
+          variant="outline" 
+          className="w-full mt-4 gap-2 rounded-xl border-dashed hover:border-primary hover:text-primary transition-all"
+          onClick={() => {
+            const jid = prompt("Enter WhatsApp ID (e.g. 628123456789@s.whatsapp.net):");
+            if (jid && jid.includes('@')) {
+              onSelectChat(jid);
+            } else if (jid) {
+              alert("Invalid JID. Please include @s.whatsapp.net or @g.us");
+            }
+          }}
+        >
+          <Users className="w-4 h-4" />
+          Start New Chat
+        </Button>
       </div>
 
       <div className="flex-1 overflow-y-auto scrollbar-thin">
