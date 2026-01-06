@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, buildUrl, type Settings, type UpdateSettings } from "@shared/routes";
+import { api, buildUrl } from "@shared/routes";
+import type { Settings, UpdateSettings } from "@shared/schema";
 
 // ============================================
 // STATUS

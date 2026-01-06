@@ -159,6 +159,63 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
       }
     });
 
+    // Sync History & Contacts
+    sock.ev.on("messaging-history.set", async ({ chats: initialChats, messages: initialMessages, contacts, isLatest }) => {
+      console.log(`Syncing history: ${initialChats.length} chats, ${initialMessages.length} messages, ${contacts.length} contacts`);
+      
+      for (const contact of contacts) {
+        await storage.createOrUpdateChat({
+          jid: contact.id,
+          name: contact.name || contact.notify || contact.verifiedName || contact.id,
+          unreadCount: 0,
+          lastMessageTimestamp: new Date(),
+        });
+      }
+
+      for (const chat of initialChats) {
+        await storage.createOrUpdateChat({
+          jid: chat.id,
+          name: chat.name || chat.id,
+          unreadCount: chat.unreadCount || 0,
+          lastMessageTimestamp: new Date(chat.conversationTimestamp ? (Number(chat.conversationTimestamp) * 1000) : Date.now()),
+        });
+      }
+
+      for (const msg of initialMessages) {
+        if (!msg.message) continue;
+        const jid = msg.key.remoteJid;
+        if (!jid) continue;
+
+        const content = msg.message.conversation || 
+                        msg.message.extendedTextMessage?.text || 
+                        msg.message.imageMessage?.caption || "";
+
+        await storage.createMessage({
+          id: msg.key.id!,
+          chatJid: jid,
+          senderJid: msg.key.participant || msg.key.remoteJid!,
+          senderName: msg.pushName || null,
+          content,
+          timestamp: new Date((msg.messageTimestamp as number) * 1000),
+          fromMe: msg.key.fromMe || false,
+        });
+      }
+      
+      io?.emit("chat_update");
+    });
+
+    sock.ev.on("contacts.upsert", async (contacts) => {
+      for (const contact of contacts) {
+        await storage.createOrUpdateChat({
+          jid: contact.id,
+          name: contact.name || contact.notify || contact.verifiedName || contact.id,
+          unreadCount: 0,
+          lastMessageTimestamp: new Date(),
+        });
+      }
+      io?.emit("chat_update");
+    });
+
     sock.ev.on("messages.upsert", async ({ messages, type }) => {
       if (type === "notify" || type === "append") {
         for (const msg of messages) {
