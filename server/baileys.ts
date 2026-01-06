@@ -165,8 +165,8 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
       
       for (const contact of contacts) {
         await storage.createOrUpdateChat({
-          jid: contact.id,
-          name: contact.name || contact.notify || contact.verifiedName || contact.id,
+          jid: contact.id || "unknown",
+          name: contact.name || contact.notify || contact.verifiedName || contact.id || "Unknown Contact",
           unreadCount: 0,
           lastMessageTimestamp: new Date(),
         });
@@ -207,8 +207,8 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
     sock.ev.on("contacts.upsert", async (contacts) => {
       for (const contact of contacts) {
         await storage.createOrUpdateChat({
-          jid: contact.id,
-          name: contact.name || contact.notify || contact.verifiedName || contact.id,
+          jid: contact.id || "unknown",
+          name: contact.name || contact.notify || contact.verifiedName || contact.id || "Unknown Contact",
           unreadCount: 0,
           lastMessageTimestamp: new Date(),
         });
