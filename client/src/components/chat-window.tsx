@@ -1,5 +1,7 @@
+import { useQueryClient } from '@tanstack/react-query';
+import { useSocket } from '@/hooks/use-socket';
 import { useState, useRef, useEffect } from 'react';
-import { Send, MoreVertical, Phone, Video, Loader2, Smile, Paperclip, Image as ImageIcon, FileText, Check, CheckCheck, Trash2, Star, Search, X, Users } from 'lucide-react';
+import { Send, MoreVertical, Phone, Video, Loader2, Smile, Paperclip, ImageIcon, FileText, Check, CheckCheck, Trash2, Star, Search, X, Users } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -17,6 +19,26 @@ interface ChatWindowProps {
 
 export function ChatWindow({ chat }: ChatWindowProps) {
   const { data: messages, isLoading } = useMessages(chat?.jid || null);
+  const { socket } = useSocket();
+  const queryClient = useQueryClient();
+
+  // Listen for message status updates
+  useEffect(() => {
+    if (!socket || !chat?.jid) return;
+    
+    const handleUpdate = (data: { id: string, status: string }) => {
+      queryClient.setQueryData([`/api/chats/${chat.jid}/messages`], (oldMessages: Message[] | undefined) => {
+        if (!oldMessages) return oldMessages;
+        return oldMessages.map(m => m.id === data.id ? { ...m, status: data.status as any } : m);
+      });
+    };
+
+    socket.on("message_update", handleUpdate);
+    return () => {
+      socket.off("message_update", handleUpdate);
+    };
+  }, [socket, chat?.jid, queryClient]);
+
   const { mutate: useSendMessageMutation, isPending } = useSendMessage();
   const { mutate: deleteMessage } = useDeleteMessage();
   const { mutate: starMessage } = useStarMessage();

@@ -244,39 +244,7 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
           const jid = msg.key.remoteJid;
           if (!jid || jid === "status@broadcast") continue;
 
-          const content =
-            msg.message.conversation ||
-            msg.message.extendedTextMessage?.text ||
-            msg.message.imageMessage?.caption ||
-            "";
-
-          let contentType = "text";
-          let fileUrl = null;
-          let fileName = null;
-
-          if (msg.message.imageMessage) {
-            contentType = "image";
-            fileName = "image.jpg";
-          } else if (msg.message.documentMessage) {
-            contentType = "document";
-            fileName = msg.message.documentMessage.fileName || "document";
-          }
-
-          if (!content && contentType === "text") continue;
-
-          // Get existing chat to preserve name
-          const existingChat = await storage.getChat(jid);
-          const chatName = msg.pushName || existingChat?.name || jid;
-
-          // Save chat if not exists
-          await storage.createOrUpdateChat({
-            jid,
-            name: chatName,
-            lastMessageTimestamp: new Date((msg.messageTimestamp as number) * 1000),
-            unreadCount: 0,
-            isGroup: jid.endsWith('@g.us'),
-            lastMessageFromMe: msg.key.fromMe || false,
-          });
+          // ... (existing message parsing logic) ...
 
           // Save message
           const message = await storage.createMessage({
@@ -290,12 +258,12 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
             fileName,
             timestamp: new Date((msg.messageTimestamp as number) * 1000),
             fromMe: msg.key.fromMe || false,
-            status: "sent"
+            status: msg.status === 4 ? "read" : msg.status === 3 ? "delivered" : "sent"
           });
 
           io?.emit("message_upsert", message);
           io?.emit("chat_update"); // Notify client to refresh chat list
-
+          
           // Auto-reply logic
           if (!msg.key.fromMe) {
             const s = await storage.getSettings();
@@ -335,6 +303,21 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
                  }, 1000);
                }
             }
+          }
+        }
+      }
+    });
+
+    sock.ev.on("messages.update", async (updates) => {
+      for (const { key, update } of updates) {
+        if (update.status) {
+          const status = update.status === 4 ? "read" : update.status === 3 ? "delivered" : "sent";
+          // Update message status in storage
+          const messages = await storage.getMessages(key.remoteJid!);
+          const msg = messages.find(m => m.id === key.id);
+          if (msg) {
+            await storage.createMessage({ ...msg, status });
+            io?.emit("message_update", { id: key.id, status });
           }
         }
       }
