@@ -277,6 +277,10 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
                          "model": "google/gemini-2.0-flash-lite-preview-02-05:free",
                          "messages": [
                            {
+                             "role": "system",
+                             "content": s.botPersona
+                           },
+                           {
                              "role": "user",
                              "content": content
                            }

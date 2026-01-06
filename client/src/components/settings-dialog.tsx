@@ -24,12 +24,14 @@ export function SettingsDialog() {
   
   const [autoReplyEnabled, setAutoReplyEnabled] = useState(false);
   const [autoReplyMessage, setAutoReplyMessage] = useState('');
+  const [botPersona, setBotPersona] = useState('');
 
   // Sync state when data loads
   useEffect(() => {
     if (settings) {
       setAutoReplyEnabled(settings.autoReplyEnabled);
       setAutoReplyMessage(settings.autoReplyMessage);
+      setBotPersona(settings.botPersona || '');
     }
   }, [settings]);
 
@@ -37,7 +39,8 @@ export function SettingsDialog() {
     updateSettings(
       { 
         autoReplyEnabled, 
-        autoReplyMessage 
+        autoReplyMessage,
+        botPersona
       },
       {
         onSuccess: () => {
@@ -85,14 +88,28 @@ export function SettingsDialog() {
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="message">Auto Reply Message</Label>
-              <Textarea
+              <Label htmlFor="message">Pesan Default (Jika AI Gagal)</Label>
+              <Input
                 id="message"
                 value={autoReplyMessage}
                 onChange={(e) => setAutoReplyMessage(e.target.value)}
-                className="min-h-[100px] resize-none rounded-xl focus-visible:ring-primary/20"
+                className="rounded-xl focus-visible:ring-primary/20"
                 placeholder="Hello! I am currently away..."
               />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="persona">Persona Bot (Instruksi AI)</Label>
+              <Textarea
+                id="persona"
+                value={botPersona}
+                onChange={(e) => setBotPersona(e.target.value)}
+                className="min-h-[120px] resize-none rounded-xl focus-visible:ring-primary/20"
+                placeholder="Contoh: Jadilah seorang marketing yang ramah dan berikan informasi tentang layanan kami..."
+              />
+              <p className="text-[10px] text-muted-foreground italic">
+                Jelaskan bagaimana AI harus berperilaku dan informasi apa yang harus ia ketahui.
+              </p>
             </div>
           </div>
         )}

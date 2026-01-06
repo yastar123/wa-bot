@@ -34,7 +34,8 @@ export class DatabaseStorage implements IStorage {
   private settings: Settings = {
     id: 1,
     autoReplyEnabled: true,
-    autoReplyMessage: "Hello! This is an automated message."
+    autoReplyMessage: "Hello! This is an automated message.",
+    botPersona: "You are a helpful assistant."
   };
 
   async getSettings(): Promise<Settings> {

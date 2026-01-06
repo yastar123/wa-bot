@@ -8,6 +8,7 @@ export const settings = pgTable("settings", {
   id: serial("id").primaryKey(),
   autoReplyEnabled: boolean("auto_reply_enabled").default(true).notNull(),
   autoReplyMessage: text("auto_reply_message").default("Hello! This is an automated message.").notNull(),
+  botPersona: text("bot_persona").default("You are a helpful assistant.").notNull(),
 });
 
 export const chats = pgTable("chats", {
