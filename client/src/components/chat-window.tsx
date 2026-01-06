@@ -396,6 +396,17 @@ function MessageBubble({
         <DropdownMenuContent align={isMe ? "end" : "start"}>
           <DropdownMenuItem 
             className="gap-2 cursor-pointer"
+            onClick={() => {
+              const text = message.content || "";
+              navigator.clipboard.writeText(text);
+              alert("Pesan disalin!");
+            }}
+          >
+            <Check className="w-4 h-4" />
+            Salin Pesan
+          </DropdownMenuItem>
+          <DropdownMenuItem 
+            className="gap-2 cursor-pointer"
             onClick={() => onStar(message.id, !message.isStarred)}
           >
             <Star className={cn("w-4 h-4", message.isStarred && "fill-yellow-500 text-yellow-500")} />

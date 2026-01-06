@@ -89,7 +89,12 @@ export function ChatSidebar({ selectedJid, onSelectChat }: ChatSidebarProps) {
 function ChatListItem({ chat, isSelected, onClick, onMarkUnread }: { chat: Chat, isSelected: boolean, onClick: () => void, onMarkUnread: (unread: boolean) => void }) {
   const formatTime = (dateStr: string | Date | null) => {
     if (!dateStr) return '';
-    return format(new Date(dateStr), 'HH:mm');
+    const date = new Date(dateStr);
+    const now = new Date();
+    if (date.toDateString() === now.toDateString()) {
+      return format(date, 'HH:mm');
+    }
+    return format(date, 'dd/MM');
   };
 
   return (
