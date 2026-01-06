@@ -4,6 +4,15 @@ import { z } from "zod";
 
 // === TABLE DEFINITIONS ===
 
+export const contacts = pgTable("contacts", {
+  jid: text("jid").primaryKey(),
+  name: text("name"),
+  pushName: text("push_name"),
+  verifiedName: text("verified_name"),
+  profilePictureUrl: text("profile_picture_url"),
+  status: text("status"),
+});
+
 export const settings = pgTable("settings", {
   id: serial("id").primaryKey(),
   autoReplyEnabled: boolean("auto_reply_enabled").default(true).notNull(),
@@ -46,6 +55,7 @@ export const messages = pgTable("messages", {
 export const insertSettingsSchema = createInsertSchema(settings);
 export const insertChatSchema = createInsertSchema(chats);
 export const insertMessageSchema = createInsertSchema(messages);
+export const insertContactSchema = createInsertSchema(contacts);
 
 // === TYPES ===
 
@@ -58,6 +68,9 @@ export type InsertChat = z.infer<typeof insertChatSchema>;
 
 export type Message = typeof messages.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
+
+export type Contact = typeof contacts.$inferSelect;
+export type InsertContact = z.infer<typeof insertContactSchema>;
 
 export type SendMessageRequest = {
   jid: string;
