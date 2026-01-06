@@ -93,6 +93,21 @@ export async function registerRoutes(
     }
   });
 
+  app.post(api.messages.star.path, async (req, res) => {
+    try {
+      const { jid, messageId, star } = api.messages.star.input.parse(req.body);
+      const messages = await storage.getMessages(jid);
+      const message = messages.find(m => m.id === messageId);
+      if (message) {
+        message.isStarred = star;
+      }
+      res.json({ success: true });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Failed to star message" });
+    }
+  });
+
   // Disconnect endpoint
   app.post('/api/disconnect', async (req, res) => {
     try {

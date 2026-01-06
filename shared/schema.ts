@@ -33,6 +33,7 @@ export const messages = pgTable("messages", {
   timestamp: timestamp("timestamp").defaultNow(),
   fromMe: boolean("from_me").default(false),
   status: text("status").default("sent").notNull(), // sent, delivered, read
+  isStarred: boolean("is_starred").default(false).notNull(),
 });
 
 // === SCHEMAS ===

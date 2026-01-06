@@ -92,6 +92,19 @@ export const api = {
         500: errorSchemas.internal,
       },
     },
+    star: {
+      method: 'POST' as const,
+      path: '/api/messages/star',
+      input: z.object({
+        jid: z.string(),
+        messageId: z.string(),
+        star: z.boolean(),
+      }),
+      responses: {
+        200: z.object({ success: z.boolean() }),
+        500: errorSchemas.internal,
+      },
+    },
   },
 };
 

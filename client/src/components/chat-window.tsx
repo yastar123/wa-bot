@@ -1,9 +1,9 @@
-import { Send, MoreVertical, Phone, Video, Loader2, Smile, Paperclip, Image as ImageIcon, FileText, Check, CheckCheck, Trash2 } from 'lucide-react';
+import { Send, MoreVertical, Phone, Video, Loader2, Smile, Paperclip, Image as ImageIcon, FileText, Check, CheckCheck, Trash2, Star } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { useMessages, useSendMessage, useDeleteMessage } from '@/hooks/use-wa';
+import { useMessages, useSendMessage, useDeleteMessage, useStarMessage } from '@/hooks/use-wa';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface ChatWindowProps {
@@ -14,6 +14,7 @@ export function ChatWindow({ chat }: ChatWindowProps) {
   const { data: messages, isLoading } = useMessages(chat?.jid || null);
   const { mutate: sendMessage, isPending } = useSendMessage();
   const { mutate: deleteMessage } = useDeleteMessage();
+  const { mutate: starMessage } = useStarMessage();
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -134,6 +135,7 @@ export function ChatWindow({ chat }: ChatWindowProps) {
               isPrevFromSame={idx > 0 && messages[idx-1].fromMe === msg.fromMe}
               chatJid={chat.jid}
               onDelete={(id) => deleteMessage({ jid: chat.jid, messageId: id })}
+              onStar={(id, star) => starMessage({ jid: chat.jid, messageId: id, star })}
             />
           ))
         )}
@@ -212,7 +214,7 @@ export function ChatWindow({ chat }: ChatWindowProps) {
   );
 }
 
-function MessageBubble({ message, isPrevFromSame, chatJid, onDelete }: { message: Message, isPrevFromSame: boolean, chatJid: string, onDelete: (id: string) => void }) {
+function MessageBubble({ message, isPrevFromSame, chatJid, onDelete, onStar }: { message: Message, isPrevFromSame: boolean, chatJid: string, onDelete: (id: string) => void, onStar: (id: string, star: boolean) => void }) {
   const isMe = message.fromMe;
 
   return (
@@ -234,6 +236,9 @@ function MessageBubble({ message, isPrevFromSame, chatJid, onDelete }: { message
             isPrevFromSame && "mt-1",
             !isPrevFromSame && "mt-2"
           )}>
+            {message.isStarred && (
+              <Star className="w-3 h-3 text-yellow-500 absolute -left-4 top-2" />
+            )}
             {!isMe && !isPrevFromSame && message.senderName && (
               <p className="text-xs font-bold text-orange-500 mb-1">{message.senderName}</p>
             )}
@@ -281,6 +286,13 @@ function MessageBubble({ message, isPrevFromSame, chatJid, onDelete }: { message
           </div>
         </DropdownMenuTrigger>
         <DropdownMenuContent align={isMe ? "end" : "start"}>
+          <DropdownMenuItem 
+            className="gap-2 cursor-pointer"
+            onClick={() => onStar(message.id, !message.isStarred)}
+          >
+            <Star className={cn("w-4 h-4", message.isStarred && "fill-yellow-500 text-yellow-500")} />
+            {message.isStarred ? "Unstar Message" : "Star Message"}
+          </DropdownMenuItem>
           <DropdownMenuItem 
             className="text-destructive focus:text-destructive gap-2 cursor-pointer"
             onClick={() => onDelete(message.id)}
