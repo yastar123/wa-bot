@@ -82,6 +82,17 @@ export async function registerRoutes(
     }
   });
 
+  app.post(api.messages.delete.path, async (req, res) => {
+    try {
+      const { jid, messageId } = api.messages.delete.input.parse(req.body);
+      await (await import('./baileys')).deleteMessage(jid, messageId);
+      res.json({ success: true });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Failed to delete message" });
+    }
+  });
+
   // Disconnect endpoint
   app.post('/api/disconnect', async (req, res) => {
     try {

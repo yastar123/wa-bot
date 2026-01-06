@@ -82,6 +82,25 @@ export function useMessages(jid: string | null) {
   });
 }
 
+export function useDeleteMessage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ jid, messageId }: { jid: string; messageId: string }) => {
+      const res = await fetch(api.messages.delete.path, {
+        method: api.messages.delete.method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jid, messageId }),
+      });
+      if (!res.ok) throw new Error('Failed to delete message');
+      return api.messages.delete.responses[200].parse(await res.json());
+    },
+    onSuccess: (_, variables) => {
+      const url = buildUrl(api.chats.getMessages.path, { jid: variables.jid });
+      queryClient.invalidateQueries({ queryKey: [url] });
+    },
+  });
+}
+
 export function useSendMessage() {
   const queryClient = useQueryClient();
   return useMutation({

@@ -1,14 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
-import { useMessages, useSendMessage } from '@/hooks/use-wa';
-import { type Chat, type Message } from '@shared/schema';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send, MoreVertical, Phone, Video, Loader2, Smile, Paperclip, Image as ImageIcon, FileText, Check, CheckCheck } from 'lucide-react';
+import { Send, MoreVertical, Phone, Video, Loader2, Smile, Paperclip, Image as ImageIcon, FileText, Check, CheckCheck, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { useMessages, useSendMessage, useDeleteMessage } from '@/hooks/use-wa';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface ChatWindowProps {
   chat: Chat | null;
@@ -17,6 +13,7 @@ interface ChatWindowProps {
 export function ChatWindow({ chat }: ChatWindowProps) {
   const { data: messages, isLoading } = useMessages(chat?.jid || null);
   const { mutate: sendMessage, isPending } = useSendMessage();
+  const { mutate: deleteMessage } = useDeleteMessage();
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -135,6 +132,8 @@ export function ChatWindow({ chat }: ChatWindowProps) {
               key={msg.id || idx} 
               message={msg} 
               isPrevFromSame={idx > 0 && messages[idx-1].fromMe === msg.fromMe}
+              chatJid={chat.jid}
+              onDelete={(id) => deleteMessage({ jid: chat.jid, messageId: id })}
             />
           ))
         )}
@@ -213,7 +212,7 @@ export function ChatWindow({ chat }: ChatWindowProps) {
   );
 }
 
-function MessageBubble({ message, isPrevFromSame }: { message: Message, isPrevFromSame: boolean }) {
+function MessageBubble({ message, isPrevFromSame, chatJid, onDelete }: { message: Message, isPrevFromSame: boolean, chatJid: string, onDelete: (id: string) => void }) {
   const isMe = message.fromMe;
 
   return (
@@ -225,59 +224,72 @@ function MessageBubble({ message, isPrevFromSame }: { message: Message, isPrevFr
         isMe ? "justify-end" : "justify-start"
       )}
     >
-      <div className={cn(
-        "max-w-[70%] px-4 py-2 shadow-sm relative group",
-        isMe 
-          ? "bg-[hsl(var(--chat-bubble-me))] rounded-2xl rounded-tr-none text-foreground" 
-          : "bg-[hsl(var(--chat-bubble-other))] rounded-2xl rounded-tl-none text-foreground",
-        isPrevFromSame && "mt-1",
-        !isPrevFromSame && "mt-2"
-      )}>
-        {!isMe && !isPrevFromSame && message.senderName && (
-          <p className="text-xs font-bold text-orange-500 mb-1">{message.senderName}</p>
-        )}
-        
-        {message.contentType === "image" && message.fileUrl && (
-          <div className="mb-2 overflow-hidden rounded-lg border border-black/5">
-            <img src={message.fileUrl} alt="Sent image" className="max-w-full h-auto" />
-          </div>
-        )}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <div className={cn(
+            "max-w-[70%] px-4 py-2 shadow-sm relative group cursor-pointer",
+            isMe 
+              ? "bg-[hsl(var(--chat-bubble-me))] rounded-2xl rounded-tr-none text-foreground" 
+              : "bg-[hsl(var(--chat-bubble-other))] rounded-2xl rounded-tl-none text-foreground",
+            isPrevFromSame && "mt-1",
+            !isPrevFromSame && "mt-2"
+          )}>
+            {!isMe && !isPrevFromSame && message.senderName && (
+              <p className="text-xs font-bold text-orange-500 mb-1">{message.senderName}</p>
+            )}
+            
+            {message.contentType === "image" && message.fileUrl && (
+              <div className="mb-2 overflow-hidden rounded-lg border border-black/5">
+                <img src={message.fileUrl} alt="Sent image" className="max-w-full h-auto" />
+              </div>
+            )}
 
-        {message.contentType === "document" && (
-          <div className="flex items-center gap-3 p-2 mb-2 bg-black/5 rounded-lg border border-black/5">
-            <div className="p-2 bg-blue-500 rounded text-white">
-              <FileText className="w-5 h-5" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{message.fileName || "Document"}</p>
-              <p className="text-[10px] opacity-70 uppercase">{message.fileName?.split('.').pop()} file</p>
-            </div>
-          </div>
-        )}
+            {message.contentType === "document" && (
+              <div className="flex items-center gap-3 p-2 mb-2 bg-black/5 rounded-lg border border-black/5">
+                <div className="p-2 bg-blue-500 rounded text-white">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{message.fileName || "Document"}</p>
+                  <p className="text-[10px] opacity-70 uppercase">{message.fileName?.split('.').pop()} file</p>
+                </div>
+              </div>
+            )}
 
-        {message.content && (
-          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
-            {message.content}
-          </p>
-        )}
-        
-        <div className="flex justify-end items-center gap-1 mt-1 opacity-70">
-          <span className="text-[10px] leading-none">
-            {message.timestamp ? format(new Date(message.timestamp), 'HH:mm') : ''}
-          </span>
-          {isMe && (
-            <span className="ml-1">
-              {message.status === 'read' ? (
-                <CheckCheck className="w-3 h-3 text-blue-400" />
-              ) : message.status === 'delivered' ? (
-                <CheckCheck className="w-3 h-3 text-muted-foreground" />
-              ) : (
-                <Check className="w-3 h-3 text-muted-foreground" />
+            {message.content && (
+              <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+                {message.content}
+              </p>
+            )}
+            
+            <div className="flex justify-end items-center gap-1 mt-1 opacity-70">
+              <span className="text-[10px] leading-none">
+                {message.timestamp ? format(new Date(message.timestamp), 'HH:mm') : ''}
+              </span>
+              {isMe && (
+                <span className="ml-1">
+                  {message.status === 'read' ? (
+                    <CheckCheck className="w-3 h-3 text-blue-400" />
+                  ) : message.status === 'delivered' ? (
+                    <CheckCheck className="w-3 h-3 text-muted-foreground" />
+                  ) : (
+                    <Check className="w-3 h-3 text-muted-foreground" />
+                  )}
+                </span>
               )}
-            </span>
-          )}
-        </div>
-      </div>
+            </div>
+          </div>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align={isMe ? "end" : "start"}>
+          <DropdownMenuItem 
+            className="text-destructive focus:text-destructive gap-2 cursor-pointer"
+            onClick={() => onDelete(message.id)}
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete Message
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </motion.div>
   );
 }

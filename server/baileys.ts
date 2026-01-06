@@ -418,6 +418,38 @@ export function forceClearState() {
   console.log('All WhatsApp state cleared');
 }
 
+export async function deleteMessage(jid: string, messageId: string) {
+  if (sock) {
+    const key = {
+      remoteJid: jid,
+      fromMe: true,
+      id: messageId
+    };
+    const sent = await sock.sendMessage(jid, { delete: key });
+    
+    // In a real database we'd delete the record. In this MemStorage, we'll mark as deleted or remove.
+    // For now, let's keep it simple and just rely on the UI update if we were using a real storage.
+    // However, our storage is memory-based. Let's update it.
+    const messages = await storage.getMessages(jid);
+    const msgIndex = messages.findIndex(m => m.id === messageId);
+    if (msgIndex >= 0) {
+      messages.splice(msgIndex, 1);
+    }
+    
+    io?.emit("chat_update");
+    return sent;
+  }
+  throw new Error("WhatsApp not connected");
+}
+
+export async function forwardMessage(jid: string, message: any) {
+  if (sock) {
+    const sent = await sock.sendMessage(jid, { forward: message });
+    return sent;
+  }
+  throw new Error("WhatsApp not connected");
+}
+
 export async function sendMessage(jid: string, content: string, options: { contentType?: string, fileUrl?: string, fileName?: string } = {}) {
   if (sock) {
     let sent;

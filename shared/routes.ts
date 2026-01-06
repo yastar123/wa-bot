@@ -80,6 +80,18 @@ export const api = {
         500: errorSchemas.internal,
       },
     },
+    delete: {
+      method: 'POST' as const,
+      path: '/api/messages/delete',
+      input: z.object({
+        jid: z.string(),
+        messageId: z.string(),
+      }),
+      responses: {
+        200: z.object({ success: z.boolean() }),
+        500: errorSchemas.internal,
+      },
+    },
   },
 };
 
