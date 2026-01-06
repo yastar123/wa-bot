@@ -23,7 +23,12 @@ export function ChatSidebar({ selectedJid, onSelectChat }: ChatSidebarProps) {
   const filteredChats = chats?.filter(chat => 
     chat.name?.toLowerCase().includes(search.toLowerCase()) || 
     chat.jid.includes(search)
-  ) || [];
+  ).sort((a, b) => {
+    // Sort by last activity
+    const timeA = a.lastMessageTimestamp ? new Date(a.lastMessageTimestamp).getTime() : 0;
+    const timeB = b.lastMessageTimestamp ? new Date(b.lastMessageTimestamp).getTime() : 0;
+    return timeB - timeA;
+  }) || [];
 
   return (
     <div className="flex flex-col h-full bg-white border-r border-border/50">

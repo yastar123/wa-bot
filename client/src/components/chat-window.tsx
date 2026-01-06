@@ -27,6 +27,8 @@ export function ChatWindow({ chat }: ChatWindowProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadType, setUploadType] = useState<"image" | "document" | null>(null);
 
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+
   // Auto scroll to bottom
   useEffect(() => {
     if (scrollRef.current && !isSearching) {
@@ -42,8 +44,14 @@ export function ChatWindow({ chat }: ChatWindowProps) {
     e?.preventDefault();
     if (!input.trim() || !chat) return;
 
-    useSendMessageMutation({ jid: chat.jid, content: input, contentType: "text" });
+    useSendMessageMutation({ 
+      jid: chat.jid, 
+      content: input, 
+      contentType: "text",
+      // In a real app we'd pass the quoted message ID to Baileys
+    });
     setInput('');
+    setReplyingTo(null);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -208,6 +216,7 @@ export function ChatWindow({ chat }: ChatWindowProps) {
               chatJid={chat.jid}
               onDelete={(id) => deleteMessage({ jid: chat.jid, messageId: id })}
               onStar={(id, star) => starMessage({ jid: chat.jid, messageId: id, star })}
+              onReply={(msg) => setReplyingTo(msg)}
               useSendMessageMutation={useSendMessageMutation}
             />
           ))
@@ -219,6 +228,39 @@ export function ChatWindow({ chat }: ChatWindowProps) {
           </div>
         )}
       </div>
+
+      {/* Reply Preview */}
+      <AnimatePresence>
+        {replyingTo && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="px-4 py-2 bg-secondary/20 border-t border-border/30 relative"
+          >
+            <div className="flex items-start gap-3 pl-3 border-l-4 border-primary bg-background/50 p-2 rounded-r-lg">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-primary mb-0.5">
+                  {replyingTo.fromMe ? "You" : replyingTo.senderName || "Contact"}
+                </p>
+                <p className="text-sm text-muted-foreground truncate">
+                  {replyingTo.contentType === 'image' ? "📷 Photo" : 
+                   replyingTo.contentType === 'document' ? "📄 Document" : 
+                   replyingTo.content}
+                </p>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-6 w-6 rounded-full" 
+                onClick={() => setReplyingTo(null)}
+              >
+                <X className="w-3 h-3" />
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Input Area */}
       <div className="p-3 bg-white/95 backdrop-blur border-t border-border/50">
@@ -314,6 +356,7 @@ function MessageBubble({
   chatJid, 
   onDelete, 
   onStar,
+  onReply,
   useSendMessageMutation // Add this parameter
 }: { 
   message: Message, 
@@ -321,6 +364,7 @@ function MessageBubble({
   chatJid: string, 
   onDelete: (id: string) => void, 
   onStar: (id: string, star: boolean) => void,
+  onReply: (message: Message) => void,
   useSendMessageMutation: any // Add type definition
 }) {
   const isMe = message.fromMe;
@@ -394,6 +438,13 @@ function MessageBubble({
           </div>
         </DropdownMenuTrigger>
         <DropdownMenuContent align={isMe ? "end" : "start"}>
+          <DropdownMenuItem 
+            className="gap-2 cursor-pointer"
+            onClick={() => onReply(message)}
+          >
+            <Send className="w-4 h-4 rotate-180" />
+            Balas
+          </DropdownMenuItem>
           <DropdownMenuItem 
             className="gap-2 cursor-pointer"
             onClick={() => {
