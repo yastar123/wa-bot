@@ -101,7 +101,8 @@ export class DatabaseStorage implements IStorage {
       fileUrl: message.fileUrl || null,
       fileName: message.fileName || null,
       timestamp: message.timestamp || new Date(),
-      fromMe: message.fromMe || false
+      fromMe: message.fromMe || false,
+      status: message.status || "sent"
     };
     
     // Check if message already exists to avoid duplicates

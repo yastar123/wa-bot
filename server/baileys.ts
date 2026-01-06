@@ -213,6 +213,7 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
           fileName,
           timestamp: new Date((msg.messageTimestamp as number) * 1000),
           fromMe: msg.key.fromMe || false,
+          status: msg.status === 4 ? "read" : msg.status === 3 ? "delivered" : "sent"
         });
       }
       
@@ -283,6 +284,7 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
             fileName,
             timestamp: new Date((msg.messageTimestamp as number) * 1000),
             fromMe: msg.key.fromMe || false,
+            status: "sent"
           });
 
           io?.emit("message_upsert", message);

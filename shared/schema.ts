@@ -29,6 +29,7 @@ export const messages = pgTable("messages", {
   fileName: text("file_name"),
   timestamp: timestamp("timestamp").defaultNow(),
   fromMe: boolean("from_me").default(false),
+  status: text("status").default("sent").notNull(), // sent, delivered, read
 });
 
 // === SCHEMAS ===

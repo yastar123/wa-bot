@@ -4,7 +4,7 @@ import { type Chat, type Message } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send, MoreVertical, Phone, Video, Loader2, Smile, Paperclip, Image as ImageIcon, FileText } from 'lucide-react';
+import { Send, MoreVertical, Phone, Video, Loader2, Smile, Paperclip, Image as ImageIcon, FileText, Check, CheckCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -256,7 +256,15 @@ function MessageBubble({ message, isPrevFromSame }: { message: Message, isPrevFr
             {message.timestamp ? format(new Date(message.timestamp), 'HH:mm') : ''}
           </span>
           {isMe && (
-            <span className="text-[10px] leading-none ml-1">✓✓</span>
+            <span className="ml-1">
+              {message.status === 'read' ? (
+                <CheckCheck className="w-3 h-3 text-blue-400" />
+              ) : message.status === 'delivered' ? (
+                <CheckCheck className="w-3 h-3 text-muted-foreground" />
+              ) : (
+                <Check className="w-3 h-3 text-muted-foreground" />
+              )}
+            </span>
           )}
         </div>
       </div>
