@@ -3,4 +3,4 @@
 [x] 3. Verify the project is working using the feedback tool
 [x] 4. Inform user the import is completed and they can start building, mark the import as completed using the complete_project_import tool
 [x] 5. Update Login page UI/UX to match WhatsApp Web exactly
-[x] 6. Import migration completed successfully
+[x] 6. Update to Indonesian WhatsApp Web design with numbered steps, removed download component
