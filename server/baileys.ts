@@ -299,18 +299,21 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
                  // Add a small delay to simulate typing
                  setTimeout(async () => {
                    try {
+                     console.log("Calling OpenRouter with persona:", s.botPersona);
                      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
                        method: "POST",
                        headers: {
                          "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
-                         "Content-Type": "application/json"
+                         "Content-Type": "application/json",
+                         "HTTP-Referer": "https://replit.com",
+                         "X-Title": "WhatsApp Bot Dashboard"
                        },
                        body: JSON.stringify({
                          "model": "google/gemini-2.0-flash-lite-preview-02-05:free",
                          "messages": [
                            {
                              "role": "system",
-                             "content": s.botPersona
+                             "content": s.botPersona || "You are a helpful assistant."
                            },
                            {
                              "role": "user",
@@ -319,11 +322,25 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
                          ]
                        })
                      });
+                     
+                     if (!response.ok) {
+                       const errorText = await response.text();
+                       throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+                     }
+                     
                      const data = await response.json();
-                     const reply = data.choices?.[0]?.message?.content || s.autoReplyMessage;
-                     await sendMessage(jid, reply);
+                     console.log("OpenRouter Response Data:", JSON.stringify(data));
+                     
+                     const reply = data.choices?.[0]?.message?.content;
+                     
+                     if (reply) {
+                       await sendMessage(jid, reply);
+                     } else {
+                       console.warn("No content in AI response, falling back to default message");
+                       await sendMessage(jid, s.autoReplyMessage);
+                     }
                    } catch (error) {
-                     console.error("OpenRouter Error:", error);
+                     console.error("Auto-reply Error:", error);
                      await sendMessage(jid, s.autoReplyMessage);
                    }
                  }, 1000);
