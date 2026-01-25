@@ -9,7 +9,7 @@
   --font-body: 'Inter', sans-serif;
 
   /* WhatsApp-inspired Palette */
-  --background: 0 0% 100%;
+  --background: 36 67% 95%; /* #fcf5eb equivalent in HSL */
   --foreground: 222 47% 11%;
   
   --primary: 142 70% 49%; /* WhatsApp Green */
