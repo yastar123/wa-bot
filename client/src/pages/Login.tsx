@@ -21,27 +21,6 @@ export default function Login() {
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col items-center justify-center p-4 md:p-8 overflow-y-auto">
         
-        {/* Download Banner */}
-        <div className="bg-white dark:bg-[#202c33] border border-[#e9edef] dark:border-[#2a3942] rounded-[24px] p-6 mb-8 w-full max-w-[1020px] flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
-          <div className="flex items-center gap-6">
-            <div className="relative flex-shrink-0">
-              <div className="w-[84px] h-[56px] border-[1.5px] border-[#8696a0] rounded-[6px] flex items-center justify-center bg-[#f0f2f5] dark:bg-[#111b21]">
-                <svg viewBox="0 0 24 24" width="28" height="28" fill="#8696a0"><path d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"></path></svg>
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-[#202c33] rounded-full p-1.5 border border-[#e9edef] dark:border-[#2a3942] shadow-sm">
-                  <svg viewBox="0 0 39 39" width="16" height="16"><path fill="#00E676" d="M10.7 32.8l.6.3c2.5 1.5 5.3 2.2 8.1 2.2 8.8 0 16-7.2 16-16 0-4.2-1.7-8.3-4.7-11.3s-7-4.7-11.3-4.7c-8.8 0-16 7.2-15.9 16.1 0 3 .9 5.9 2.4 8.4l.4.6-1.6 5.9 6-1.5z"></path><path fill="#FFF" d="M32.4 6.4C29 2.9 24.3 1 19.5 1 9.3 1 1.1 9.3 1.2 19.4c0 3.2.9 6.3 2.4 9.1L1 38l9.7-2.5c2.7 1.5 5.7 2.2 8.7 2.2 10.1 0 18.3-8.3 18.3-18.4 0-4.9-1.9-9.5-5.3-12.9z"></path></svg>
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-col">
-              <h2 className="text-[#111b21] dark:text-[#e9edef] text-[16px] font-medium leading-tight mb-1">Unduh WhatsApp untuk Windows</h2>
-              <p className="text-[#667781] dark:text-[#8696a0] text-[14px] leading-snug">Buat panggilan, bagikan layar, dan dapatkan pengalaman lebih cepat dengan mengunduh WhatsApp untuk Windows.</p>
-            </div>
-          </div>
-          <button className="bg-[#1fa855] hover:bg-[#1a8c46] text-white px-8 py-2.5 rounded-full font-medium text-[14px] flex items-center gap-2 flex-shrink-0 transition-colors">
-            Unduh <Download className="w-4 h-4" />
-          </button>
-        </div>
-
         {/* Main Card */}
         <div className="bg-white dark:bg-[#202c33] border border-[#e9edef] dark:border-[#2a3942] rounded-[24px] w-full max-w-[1020px] flex flex-col md:flex-row shadow-sm min-h-[440px]">
           
