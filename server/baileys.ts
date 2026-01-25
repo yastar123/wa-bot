@@ -163,10 +163,13 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
     sock.ev.on("messaging-history.set", async ({ chats: initialChats, messages: initialMessages, contacts, isLatest }) => {
       console.log(`Syncing history: ${initialChats.length} chats, ${initialMessages.length} messages, ${contacts.length} contacts`);
       
+      const existingChats = await storage.getChats();
+
       for (const contact of contacts) {
+        const existingChat = existingChats.find(c => c.jid === contact.id);
         await storage.createOrUpdateChat({
           jid: contact.id || "unknown",
-          name: contact.name || contact.notify || contact.verifiedName || contact.id || "Unknown Contact",
+          name: contact.name || contact.notify || contact.verifiedName || existingChat?.name || contact.id || "Unknown Contact",
           unreadCount: 0,
           lastMessageTimestamp: new Date(),
           isGroup: contact.id?.endsWith('@g.us') || false,
@@ -175,9 +178,10 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
 
       for (const chat of initialChats) {
         if (!chat.id) continue;
+        const existingChat = existingChats.find(c => c.jid === chat.id);
         await storage.createOrUpdateChat({
           jid: chat.id,
-          name: chat.name || chat.id,
+          name: chat.name || existingChat?.name || chat.id,
           unreadCount: chat.unreadCount || 0,
           lastMessageTimestamp: new Date(chat.conversationTimestamp ? (Number(chat.conversationTimestamp) * 1000) : Date.now()),
           isGroup: chat.id?.endsWith('@g.us') || false,
@@ -205,11 +209,13 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
           fileName = msg.message.documentMessage.fileName || "document";
         }
 
+        const existingChat = await storage.getChat(jid);
+
         await storage.createMessage({
           id: msg.key.id!,
           chatJid: jid,
           senderJid: msg.key.participant || msg.key.remoteJid!,
-          senderName: msg.pushName || null,
+          senderName: msg.pushName || existingChat?.name || null,
           content,
           contentType,
           fileUrl,
@@ -224,10 +230,12 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
     });
 
     sock.ev.on("contacts.upsert", async (contacts) => {
+      const existingChats = await storage.getChats();
       for (const contact of contacts) {
+        const existingChat = existingChats.find(c => c.jid === contact.id);
         await storage.createOrUpdateChat({
           jid: contact.id || "unknown",
-          name: contact.name || contact.notify || contact.verifiedName || contact.id || "Unknown Contact",
+          name: contact.name || contact.notify || contact.verifiedName || existingChat?.name || contact.id || "Unknown Contact",
           unreadCount: 0,
           lastMessageTimestamp: new Date(),
           isGroup: (contact.id || "").endsWith('@g.us'),
@@ -244,7 +252,23 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
           const jid = msg.key.remoteJid;
           if (!jid || jid === "status@broadcast") continue;
 
-          // ... (existing message parsing logic) ...
+          const content = msg.message.conversation || 
+                          msg.message.extendedTextMessage?.text || 
+                          msg.message.imageMessage?.caption || "";
+          
+          let contentType = "text";
+          let fileUrl = null;
+          let fileName = null;
+
+          if (msg.message.imageMessage) {
+            contentType = "image";
+            fileName = "image.jpg";
+          } else if (msg.message.documentMessage) {
+            contentType = "document";
+            fileName = msg.message.documentMessage.fileName || "document";
+          }
+
+          const existingChat = await storage.getChat(jid);
 
           // Save message
           const message = await storage.createMessage({
@@ -252,10 +276,12 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
             chatJid: jid,
             senderJid: msg.key.participant || msg.key.remoteJid!,
             senderName: msg.pushName || existingChat?.name || jid,
-            content,
-            contentType,
-            fileUrl,
-            fileName,
+            content: msg.message.conversation || 
+                     msg.message.extendedTextMessage?.text || 
+                     msg.message.imageMessage?.caption || "",
+            contentType: msg.message.imageMessage ? "image" : msg.message.documentMessage ? "document" : "text",
+            fileUrl: null,
+            fileName: msg.message.documentMessage?.fileName || (msg.message.imageMessage ? "image.jpg" : null),
             timestamp: new Date((msg.messageTimestamp as number) * 1000),
             fromMe: msg.key.fromMe || false,
             status: msg.status === 4 ? "read" : msg.status === 3 ? "delivered" : "sent"
