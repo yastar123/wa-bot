@@ -148,7 +148,15 @@ export async function registerRoutes(
   // Disconnect endpoint
   app.post('/api/disconnect', async (req, res) => {
     try {
+      console.log('Disconnect requested, clearing state and reinitializing...');
       forceClearState();
+      
+      // Reinitialize WhatsApp after a short delay to generate new QR
+      setTimeout(() => {
+        console.log('Reinitializing WhatsApp for new QR code...');
+        initWhatsapp(io);
+      }, 2000);
+      
       res.json({ success: true });
     } catch (err) {
       console.error(err);

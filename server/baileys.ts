@@ -9,6 +9,7 @@ import { Boom } from "@hapi/boom";
 import pino from "pino";
 import { storage } from "./storage";
 import type { Server as SocketIOServer } from "socket.io";
+import { promises as fs } from "fs";
 
 let sock: WASocket | undefined;
 let io: SocketIOServer | undefined;
@@ -16,6 +17,9 @@ let qr: string | undefined;
 
 // Add global variable to track initialization
 let isInitializing = false;
+let reconnectTimeout: NodeJS.Timeout | null = null;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 10;
 
 // Add global variable to track connection state
 let connectionState: 'disconnected' | 'connecting' | 'connected' | 'open' | 'close' = 'disconnected';
@@ -63,14 +67,29 @@ async function loadExistingChats() {
 }
 
 export async function initWhatsapp(socketIO: SocketIOServer) {
+  // Clear any existing reconnect timeout
+  if (reconnectTimeout) {
+    clearTimeout(reconnectTimeout);
+    reconnectTimeout = null;
+  }
+  
   if (isInitializing) {
     console.log('WhatsApp already initializing, skipping...');
     return;
   }
   
+  // Check if we've exceeded max reconnect attempts
+  if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+    console.log(`Max reconnect attempts (${MAX_RECONNECT_ATTEMPTS}) reached. Stopping reconnection.`);
+    connectionState = 'disconnected';
+    isInitializing = false;
+    io?.emit("status", { status: "disconnected" });
+    return;
+  }
+  
   isInitializing = true;
   connectionState = 'connecting';
-  console.log('Initializing WhatsApp...');
+  console.log(`Initializing WhatsApp... (attempt ${reconnectAttempts + 1})`);
   io = socketIO;
   
   try {
@@ -135,11 +154,23 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
         
         // Only reconnect if not logged out and socket exists
         if (shouldReconnect && sock) {
+          // Increment reconnect attempts
+          reconnectAttempts++;
+          
+          // Clear any existing timeout
+          if (reconnectTimeout) {
+            clearTimeout(reconnectTimeout);
+          }
+          
           // Add delay before reconnect to allow UI to update
-          setTimeout(() => {
-            console.log('Attempting to reconnect...');
+          const delay = Math.min(5000 * reconnectAttempts, 30000); // Exponential backoff, max 30 seconds
+          reconnectTimeout = setTimeout(() => {
+            console.log(`Attempting to reconnect... (attempt ${reconnectAttempts})`);
             initWhatsapp(socketIO);
-          }, 2000);
+          }, delay);
+        } else {
+          // Reset reconnect attempts if not reconnecting
+          reconnectAttempts = 0;
         }
       } else if (connection === "open") {
         connectionState = 'connected';
@@ -153,6 +184,15 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
         });
         qr = undefined;
         isInitializing = false;
+        
+        // Clear any reconnect timeout when successfully connected
+        if (reconnectTimeout) {
+          clearTimeout(reconnectTimeout);
+          reconnectTimeout = null;
+        }
+        
+        // Reset reconnect attempts on successful connection
+        reconnectAttempts = 0;
         
         // Load existing chats when connection opens
         await loadExistingChats();
@@ -299,7 +339,16 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
                  // Add a small delay to simulate typing
                  setTimeout(async () => {
                    try {
+                     console.log("=== AI AUTO-REPLY START ===");
                      console.log("Calling OpenRouter with persona:", s.botPersona);
+                     console.log("User message:", content);
+                     console.log("API Key exists:", !!process.env.OPENROUTER_API_KEY);
+                     console.log("API Key length:", process.env.OPENROUTER_API_KEY?.length || 0);
+                     
+                     if (!process.env.OPENROUTER_API_KEY) {
+                       throw new Error("OPENROUTER_API_KEY not configured");
+                     }
+                     
                      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
                        method: "POST",
                        headers: {
@@ -309,39 +358,52 @@ export async function initWhatsapp(socketIO: SocketIOServer) {
                          "X-Title": "WhatsApp Bot Dashboard"
                        },
                        body: JSON.stringify({
-                         "model": "google/gemini-2.0-flash-lite-preview-02-05:free",
-                         "messages": [
-                           {
-                             "role": "system",
-                             "content": s.botPersona || "You are a helpful assistant."
-                           },
-                           {
-                             "role": "user",
-                             "content": content
-                           }
-                         ]
-                       })
+                        "model": "deepseek/deepseek-r1-0528:free",
+                        "max_tokens": 500,
+                        "messages": [
+                          {
+                            "role": "system",
+                            "content": s.botPersona || "You are a helpful assistant."
+                          },
+                          {
+                            "role": "user",
+                            "content": content
+                          }
+                        ]
+                      })
                      });
+                     
+                     console.log("OpenRouter API Status:", response.status);
+                     console.log("OpenRouter Headers:", Object.fromEntries(response.headers.entries()));
                      
                      if (!response.ok) {
                        const errorText = await response.text();
+                       console.error("OpenRouter API Error Response:", errorText);
                        throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
                      }
                      
                      const data = await response.json();
-                     console.log("OpenRouter Response Data:", JSON.stringify(data));
+                     console.log("OpenRouter Full Response:", JSON.stringify(data, null, 2));
                      
                      const reply = data.choices?.[0]?.message?.content;
+                     console.log("Extracted reply:", reply);
+                     console.log("Reply length:", reply?.length || 0);
                      
-                     if (reply) {
+                     if (reply && reply.trim().length > 0) {
+                       console.log("✅ AI Reply successful - sending:", reply.substring(0, 100) + "...");
                        await sendMessage(jid, reply);
                      } else {
-                       console.warn("No content in AI response, falling back to default message");
+                       console.warn("⚠️ No content in AI response, falling back to default message");
+                       console.log("Default message:", s.autoReplyMessage);
                        await sendMessage(jid, s.autoReplyMessage);
                      }
+                     console.log("=== AI AUTO-REPLY END ===");
                    } catch (error) {
-                     console.error("Auto-reply Error:", error);
+                     console.error("❌ Auto-reply Error:", error);
+                     console.log("Falling back to default message due to error");
+                     console.log("Default message:", s.autoReplyMessage);
                      await sendMessage(jid, s.autoReplyMessage);
+                     console.log("=== AI AUTO-REPLY END (WITH ERROR) ===");
                    }
                  }, 1000);
                }
@@ -428,6 +490,16 @@ export function disconnectSocket() {
 // Add function to force clear all state
 export function forceClearState() {
   console.log('Force clearing all WhatsApp state...');
+  
+  // Clear reconnect timeout
+  if (reconnectTimeout) {
+    clearTimeout(reconnectTimeout);
+    reconnectTimeout = null;
+  }
+  
+  // Reset reconnect attempts
+  reconnectAttempts = 0;
+  
   if (sock) {
     try {
       sock.ws?.close();
@@ -442,6 +514,13 @@ export function forceClearState() {
   qr = undefined;
   isInitializing = false;
   connectionState = 'disconnected';
+  
+  // IMPORTANT: Delete auth info folder to force QR generation on next init
+  fs.rm('auth_info_baileys', { recursive: true, force: true }).then(() => {
+    console.log('Auth info folder deleted - will require QR scan on next login');
+  }).catch((error: any) => {
+    console.log('Auth info folder not found or already cleared:', error.message);
+  });
   
   // Emit disconnected status to all clients
   if (io) {

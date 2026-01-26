@@ -51,18 +51,6 @@ export function useSocket() {
         qr: data.qr || prev.qr, // Preserve existing QR if update doesn't provide one
       }));
       
-      // Jika status connected, redirect ke dashboard (hanya jika di login page)
-      if (data.status === 'connected' && window.location.pathname === '/login') {
-        console.log('Redirecting to dashboard...');
-        window.location.href = '/';
-      }
-      
-      // Jika status disconnected dan user di dashboard, redirect ke login
-      if (data.status === 'disconnected' && window.location.pathname === '/') {
-        console.log('Redirecting to login page...');
-        window.location.href = '/login';
-      }
-      
       // Invalidate status query to ensure everything is in sync
       queryClient.invalidateQueries({ queryKey: [api.status.get.path] });
     });

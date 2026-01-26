@@ -12,6 +12,17 @@ import { Loader2 } from "lucide-react";
 
 function Router() {
   const { data: statusData, isLoading } = useStatus();
+  const [location, setLocation] = useLocation();
+  
+  useEffect(() => {
+    if (!isLoading && statusData) {
+      if (statusData.status === 'connected' && location === '/login') {
+        setLocation('/');
+      } else if (statusData.status !== 'connected' && location !== '/login') {
+        setLocation('/login');
+      }
+    }
+  }, [statusData, isLoading, location, setLocation]);
   
   if (isLoading) {
     return (
@@ -27,16 +38,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
-      <Route path="/">
-        {() => {
-          // Jika connected, tampilkan dashboard
-          if (statusData?.status === 'connected') {
-            return <Dashboard />;
-          }
-          // Jika tidak connected, redirect ke login
-          return <Login />;
-        }}
-      </Route>
+      <Route path="/" component={Dashboard} />
       <Route component={NotFound} />
     </Switch>
   );

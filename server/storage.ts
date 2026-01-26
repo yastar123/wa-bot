@@ -16,6 +16,19 @@ import {
 } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 
+// In-memory fallback storage
+const fallbackStorage = {
+  chats: [] as Chat[],
+  messages: [] as Message[],
+  contacts: [] as Contact[],
+  settings: {
+    id: 1,
+    autoReplyEnabled: true,
+    autoReplyMessage: "Hello! This is an automated message.",
+    botPersona: "You are a helpful assistant."
+  } as Settings
+};
+
 export interface IStorage {
   // Settings
   getSettings(): Promise<Settings>;
@@ -37,132 +50,398 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  private chats: Chat[] = [];
-  private messages: Message[] = [];
-  private contacts: Contact[] = [];
-  private settings: Settings = {
-    id: 1,
-    autoReplyEnabled: true,
-    autoReplyMessage: "Hello! This is an automated message.",
-    botPersona: "You are a helpful assistant."
-  };
-
   async getSettings(): Promise<Settings> {
-    return this.settings;
+    if (!db) {
+      console.log("Using fallback storage for getSettings");
+      return fallbackStorage.settings;
+    }
+    
+    try {
+      const result = await db.select().from(settings).limit(1);
+      if (result.length === 0) {
+        // Create default settings if none exist
+        const defaultSettings = {
+          autoReplyEnabled: true,
+          autoReplyMessage: "Hello! This is an automated message.",
+          botPersona: "You are a helpful assistant."
+        };
+        const [newSettings] = await db.insert(settings).values(defaultSettings).returning();
+        return newSettings;
+      }
+      return result[0];
+    } catch (error) {
+      console.warn("Database error, using fallback storage:", error);
+      return fallbackStorage.settings;
+    }
   }
 
   async updateSettings(updates: UpdateSettings): Promise<Settings> {
-    this.settings = { ...this.settings, ...updates };
-    return this.settings;
+    if (!db) {
+      console.log("Using fallback storage for updateSettings");
+      fallbackStorage.settings = { ...fallbackStorage.settings, ...updates };
+      return fallbackStorage.settings;
+    }
+    
+    try {
+      const [result] = await db.update(settings).set(updates).returning();
+      return result;
+    } catch (error) {
+      console.warn("Database error, using fallback storage:", error);
+      fallbackStorage.settings = { ...fallbackStorage.settings, ...updates };
+      return fallbackStorage.settings;
+    }
   }
 
   async getChats(): Promise<Chat[]> {
-    return this.chats;
+    if (!db) {
+      console.log("Using fallback storage for getChats");
+      return fallbackStorage.chats;
+    }
+    
+    try {
+      return await db.select().from(chats).orderBy(desc(chats.lastMessageTimestamp));
+    } catch (error) {
+      console.warn("Database error, using fallback storage:", error);
+      return fallbackStorage.chats;
+    }
   }
 
   async getChat(jid: string): Promise<Chat | undefined> {
-    return this.chats.find(c => c.jid === jid);
+    if (!db) {
+      console.log("Using fallback storage for getChat");
+      return fallbackStorage.chats.find(c => c.jid === jid);
+    }
+    
+    try {
+      const result = await db.select().from(chats).where(eq(chats.jid, jid)).limit(1);
+      return result[0];
+    } catch (error) {
+      console.warn("Database error, using fallback storage:", error);
+      return fallbackStorage.chats.find(c => c.jid === jid);
+    }
   }
 
   async createOrUpdateChat(chat: InsertChat): Promise<Chat> {
-    const existingIndex = this.chats.findIndex(c => c.jid === chat.jid);
-    const existingChat = this.chats[existingIndex];
+    const existing = await this.getChat(chat.jid);
     
-    const chatName = chat.name || existingChat?.name || 'Unknown';
-    
-    const newChat = {
-      jid: chat.jid,
-      name: chatName,
-      unreadCount: chat.unreadCount || 0,
-      lastMessageTimestamp: chat.lastMessageTimestamp || new Date(),
-      isOnline: chat.isOnline || existingChat?.isOnline || false,
-      lastSeen: chat.lastSeen || existingChat?.lastSeen || null,
-      isTyping: chat.isTyping || existingChat?.isTyping || false,
-      isMarkedUnread: chat.isMarkedUnread || existingChat?.isMarkedUnread || false,
-      isPinned: chat.isPinned || existingChat?.isPinned || false,
-      isGroup: chat.isGroup || existingChat?.isGroup || false,
-      groupDescription: chat.groupDescription || existingChat?.groupDescription || null,
-      lastMessageFromMe: chat.lastMessageFromMe || existingChat?.lastMessageFromMe || false,
-    };
-    
-    if (existingIndex >= 0) {
-      this.chats[existingIndex] = newChat;
-    } else {
-      this.chats.push(newChat);
+    if (!db) {
+      console.log("Using fallback storage for createOrUpdateChat");
+      const chatName = chat.name || existing?.name || 'Unknown';
+      const newChat = {
+        jid: chat.jid,
+        name: chatName,
+        unreadCount: chat.unreadCount || 0,
+        lastMessageTimestamp: chat.lastMessageTimestamp || new Date(),
+        isOnline: chat.isOnline || existing?.isOnline || false,
+        lastSeen: chat.lastSeen || existing?.lastSeen || null,
+        isTyping: chat.isTyping || existing?.isTyping || false,
+        isMarkedUnread: chat.isMarkedUnread || existing?.isMarkedUnread || false,
+        isPinned: chat.isPinned || existing?.isPinned || false,
+        isGroup: chat.isGroup || existing?.isGroup || false,
+        groupDescription: chat.groupDescription || existing?.groupDescription || null,
+        lastMessageFromMe: chat.lastMessageFromMe || existing?.lastMessageFromMe || false,
+      };
+      
+      const existingIndex = fallbackStorage.chats.findIndex(c => c.jid === chat.jid);
+      if (existingIndex >= 0) {
+        fallbackStorage.chats[existingIndex] = newChat;
+      } else {
+        fallbackStorage.chats.push(newChat);
+      }
+      return newChat;
     }
     
-    return newChat;
+    try {
+      if (existing) {
+        const chatName = chat.name || existing.name || 'Unknown';
+        const [updated] = await db
+          .update(chats)
+          .set({
+            name: chatName,
+            unreadCount: chat.unreadCount ?? existing.unreadCount,
+            lastMessageTimestamp: chat.lastMessageTimestamp || existing.lastMessageTimestamp,
+            isOnline: chat.isOnline ?? existing.isOnline,
+            lastSeen: chat.lastSeen || existing.lastSeen,
+            isTyping: chat.isTyping ?? existing.isTyping,
+            isMarkedUnread: chat.isMarkedUnread ?? existing.isMarkedUnread,
+            isPinned: chat.isPinned ?? existing.isPinned,
+            isGroup: chat.isGroup ?? existing.isGroup,
+            groupDescription: chat.groupDescription || existing.groupDescription,
+            lastMessageFromMe: chat.lastMessageFromMe ?? existing.lastMessageFromMe,
+          })
+          .where(eq(chats.jid, chat.jid))
+          .returning();
+        return updated;
+      } else {
+        const [created] = await db.insert(chats).values({
+          jid: chat.jid,
+          name: chat.name || 'Unknown',
+          unreadCount: chat.unreadCount || 0,
+          lastMessageTimestamp: chat.lastMessageTimestamp || new Date(),
+          isOnline: chat.isOnline || false,
+          lastSeen: chat.lastSeen || null,
+          isTyping: chat.isTyping || false,
+          isMarkedUnread: chat.isMarkedUnread || false,
+          isPinned: chat.isPinned || false,
+          isGroup: chat.isGroup || false,
+          groupDescription: chat.groupDescription || null,
+          lastMessageFromMe: chat.lastMessageFromMe || false,
+        }).returning();
+        return created;
+      }
+    } catch (error) {
+      console.warn("Database error, using fallback storage:", error);
+      // Fallback logic (same as above)
+      const chatName = chat.name || existing?.name || 'Unknown';
+      const newChat = {
+        jid: chat.jid,
+        name: chatName,
+        unreadCount: chat.unreadCount || 0,
+        lastMessageTimestamp: chat.lastMessageTimestamp || new Date(),
+        isOnline: chat.isOnline || existing?.isOnline || false,
+        lastSeen: chat.lastSeen || existing?.lastSeen || null,
+        isTyping: chat.isTyping || existing?.isTyping || false,
+        isMarkedUnread: chat.isMarkedUnread || existing?.isMarkedUnread || false,
+        isPinned: chat.isPinned || existing?.isPinned || false,
+        isGroup: chat.isGroup || existing?.isGroup || false,
+        groupDescription: chat.groupDescription || existing?.groupDescription || null,
+        lastMessageFromMe: chat.lastMessageFromMe || existing?.lastMessageFromMe || false,
+      };
+      
+      const existingIndex = fallbackStorage.chats.findIndex(c => c.jid === chat.jid);
+      if (existingIndex >= 0) {
+        fallbackStorage.chats[existingIndex] = newChat;
+      } else {
+        fallbackStorage.chats.push(newChat);
+      }
+      return newChat;
+    }
   }
 
   async getMessages(chatJid: string): Promise<Message[]> {
-    return this.messages.filter(m => m.chatJid === chatJid);
+    if (!db) {
+      console.log("Using fallback storage for getMessages");
+      return fallbackStorage.messages.filter(m => m.chatJid === chatJid);
+    }
+    
+    try {
+      return await db
+        .select()
+        .from(messages)
+        .where(eq(messages.chatJid, chatJid))
+        .orderBy(desc(messages.timestamp));
+    } catch (error) {
+      console.warn("Database error, using fallback storage:", error);
+      return fallbackStorage.messages.filter(m => m.chatJid === chatJid);
+    }
   }
 
   async createMessage(message: InsertMessage): Promise<Message> {
-    const chat = this.chats.find(c => c.jid === message.chatJid);
-    const newMessage = {
-      id: message.id,
-      chatJid: message.chatJid,
-      senderJid: message.senderJid,
-      senderName: message.senderName || chat?.name || null,
-      content: message.content || null,
-      contentType: message.contentType || "text",
-      fileUrl: message.fileUrl || null,
-      fileName: message.fileName || null,
-      timestamp: message.timestamp || new Date(),
-      fromMe: message.fromMe || false,
-      status: message.status || "sent",
-      isStarred: message.isStarred || false
-    };
-    
-    const existingIndex = this.messages.findIndex(m => m.id === newMessage.id);
-    if (existingIndex >= 0) {
-      newMessage.isStarred = message.isStarred ?? this.messages[existingIndex].isStarred;
-      this.messages[existingIndex] = newMessage;
+    if (!db) {
+      console.log("Using fallback storage for createMessage");
+      const chat = fallbackStorage.chats.find(c => c.jid === message.chatJid);
+      const newMessage = {
+        id: message.id,
+        chatJid: message.chatJid,
+        senderJid: message.senderJid,
+        senderName: message.senderName || chat?.name || null,
+        content: message.content || null,
+        contentType: message.contentType || "text",
+        fileUrl: message.fileUrl || null,
+        fileName: message.fileName || null,
+        timestamp: message.timestamp || new Date(),
+        fromMe: message.fromMe || false,
+        status: message.status || "sent",
+        isStarred: message.isStarred || false
+      };
+      
+      const existingIndex = fallbackStorage.messages.findIndex(m => m.id === newMessage.id);
+      if (existingIndex >= 0) {
+        newMessage.isStarred = message.isStarred ?? fallbackStorage.messages[existingIndex].isStarred;
+        fallbackStorage.messages[existingIndex] = newMessage;
+        return newMessage;
+      }
+      
+      fallbackStorage.messages.push(newMessage);
       return newMessage;
     }
     
-    this.messages.push(newMessage);
-    return newMessage;
+    try {
+      const chat = await this.getChat(message.chatJid);
+      const [created] = await db.insert(messages).values({
+        id: message.id,
+        chatJid: message.chatJid,
+        senderJid: message.senderJid,
+        senderName: message.senderName || chat?.name || null,
+        content: message.content || null,
+        contentType: message.contentType || "text",
+        fileUrl: message.fileUrl || null,
+        fileName: message.fileName || null,
+        timestamp: message.timestamp || new Date(),
+        fromMe: message.fromMe || false,
+        status: message.status || "sent",
+        isStarred: message.isStarred || false
+      }).returning();
+      return created;
+    } catch (error) {
+      console.warn("Database error, using fallback storage:", error);
+      // Fallback logic (same as above)
+      const chat = fallbackStorage.chats.find(c => c.jid === message.chatJid);
+      const newMessage = {
+        id: message.id,
+        chatJid: message.chatJid,
+        senderJid: message.senderJid,
+        senderName: message.senderName || chat?.name || null,
+        content: message.content || null,
+        contentType: message.contentType || "text",
+        fileUrl: message.fileUrl || null,
+        fileName: message.fileName || null,
+        timestamp: message.timestamp || new Date(),
+        fromMe: message.fromMe || false,
+        status: message.status || "sent",
+        isStarred: message.isStarred || false
+      };
+      
+      const existingIndex = fallbackStorage.messages.findIndex(m => m.id === newMessage.id);
+      if (existingIndex >= 0) {
+        newMessage.isStarred = message.isStarred ?? fallbackStorage.messages[existingIndex].isStarred;
+        fallbackStorage.messages[existingIndex] = newMessage;
+        return newMessage;
+      }
+      
+      fallbackStorage.messages.push(newMessage);
+      return newMessage;
+    }
   }
 
   async toggleStarMessage(messageId: string, star: boolean): Promise<boolean> {
-    const message = this.messages.find(m => m.id === messageId);
-    if (message) {
-      message.isStarred = star;
-      return true;
+    if (!db) {
+      console.log("Using fallback storage for toggleStarMessage");
+      const message = fallbackStorage.messages.find(m => m.id === messageId);
+      if (message) {
+        message.isStarred = star;
+        return true;
+      }
+      return false;
     }
-    return false;
+    
+    try {
+      const result = await db
+        .update(messages)
+        .set({ isStarred: star })
+        .where(eq(messages.id, messageId))
+        .returning();
+      return result.length > 0;
+    } catch (error) {
+      console.warn("Database error, using fallback storage:", error);
+      const message = fallbackStorage.messages.find(m => m.id === messageId);
+      if (message) {
+        message.isStarred = star;
+        return true;
+      }
+      return false;
+    }
   }
 
   async getContacts(): Promise<Contact[]> {
-    return this.contacts;
+    if (!db) {
+      console.log("Using fallback storage for getContacts");
+      return fallbackStorage.contacts;
+    }
+    
+    try {
+      return await db.select().from(contacts);
+    } catch (error) {
+      console.warn("Database error, using fallback storage:", error);
+      return fallbackStorage.contacts;
+    }
   }
 
   async getContact(jid: string): Promise<Contact | undefined> {
-    return this.contacts.find(c => c.jid === jid);
+    if (!db) {
+      console.log("Using fallback storage for getContact");
+      return fallbackStorage.contacts.find(c => c.jid === jid);
+    }
+    
+    try {
+      const result = await db.select().from(contacts).where(eq(contacts.jid, jid)).limit(1);
+      return result[0];
+    } catch (error) {
+      console.warn("Database error, using fallback storage:", error);
+      return fallbackStorage.contacts.find(c => c.jid === jid);
+    }
   }
 
   async createOrUpdateContact(contact: InsertContact): Promise<Contact> {
-    const existingIndex = this.contacts.findIndex(c => c.jid === contact.jid);
-    const existingContact = this.contacts[existingIndex];
+    const existing = await this.getContact(contact.jid);
 
-    const newContact = {
-      jid: contact.jid,
-      name: contact.name || existingContact?.name || null,
-      pushName: contact.pushName || existingContact?.pushName || null,
-      verifiedName: contact.verifiedName || existingContact?.verifiedName || null,
-      profilePictureUrl: contact.profilePictureUrl || existingContact?.profilePictureUrl || null,
-      status: contact.status || existingContact?.status || null,
-    };
+    if (!db) {
+      console.log("Using fallback storage for createOrUpdateContact");
+      const newContact = {
+        jid: contact.jid,
+        name: contact.name || existing?.name || null,
+        pushName: contact.pushName || existing?.pushName || null,
+        verifiedName: contact.verifiedName || existing?.verifiedName || null,
+        profilePictureUrl: contact.profilePictureUrl || existing?.profilePictureUrl || null,
+        status: contact.status || existing?.status || null,
+      };
 
-    if (existingIndex >= 0) {
-      this.contacts[existingIndex] = newContact;
-    } else {
-      this.contacts.push(newContact);
+      const existingIndex = fallbackStorage.contacts.findIndex(c => c.jid === contact.jid);
+      if (existingIndex >= 0) {
+        fallbackStorage.contacts[existingIndex] = newContact;
+      } else {
+        fallbackStorage.contacts.push(newContact);
+      }
+
+      return newContact;
     }
+    
+    try {
+      if (existing) {
+        const [updated] = await db
+          .update(contacts)
+          .set({
+            name: contact.name || existing.name,
+            pushName: contact.pushName || existing.pushName,
+            verifiedName: contact.verifiedName || existing.verifiedName,
+            profilePictureUrl: contact.profilePictureUrl || existing.profilePictureUrl,
+            status: contact.status || existing.status,
+          })
+          .where(eq(contacts.jid, contact.jid))
+          .returning();
+        return updated;
+      } else {
+        const [created] = await db.insert(contacts).values({
+          jid: contact.jid,
+          name: contact.name || null,
+          pushName: contact.pushName || null,
+          verifiedName: contact.verifiedName || null,
+          profilePictureUrl: contact.profilePictureUrl || null,
+          status: contact.status || null,
+        }).returning();
+        return created;
+      }
+    } catch (error) {
+      console.warn("Database error, using fallback storage:", error);
+      // Fallback logic (same as above)
+      const newContact = {
+        jid: contact.jid,
+        name: contact.name || existing?.name || null,
+        pushName: contact.pushName || existing?.pushName || null,
+        verifiedName: contact.verifiedName || existing?.verifiedName || null,
+        profilePictureUrl: contact.profilePictureUrl || existing?.profilePictureUrl || null,
+        status: contact.status || existing?.status || null,
+      };
 
-    return newContact;
+      const existingIndex = fallbackStorage.contacts.findIndex(c => c.jid === contact.jid);
+      if (existingIndex >= 0) {
+        fallbackStorage.contacts[existingIndex] = newContact;
+      } else {
+        fallbackStorage.contacts.push(newContact);
+      }
+
+      return newContact;
+    }
   }
 }
 

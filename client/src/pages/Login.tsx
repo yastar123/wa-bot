@@ -73,13 +73,6 @@ export default function Login() {
                 </div>
                 <span className="text-[14px] text-[#667781] dark:text-[#8696a0]">Tetap masuk di browser ini</span>
               </label>
-              
-              <button 
-                className="text-[#008069] dark:text-[#00a884] text-[14px] font-medium hover:underline flex items-center gap-1 self-start sm:self-auto"
-                data-testid="link-phone-login"
-              >
-                Login dengan nomor telepon <span className="text-xl leading-none">›</span>
-              </button>
             </div>
           </div>
 
